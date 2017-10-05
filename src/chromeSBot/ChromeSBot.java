@@ -19,12 +19,15 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.Select;
 
-public class ChromeSBot {
+public class ChromeSBot 
+{
 	
 	private List<Item> order = new ArrayList<Item>();
+	private List<String> links = new ArrayList<String>();
 	private int sleep = -1;
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) 
+	{
 		//http://stackoverflow.com/questions/11908249/debugging-element-is-not-clickable-at-point-error
 		
 		Scanner reader = new Scanner(System.in);
@@ -74,32 +77,42 @@ public class ChromeSBot {
 //		realOrder.add(two);
 		dummyOrder.add(dummy);
 		
-		int sleep = 300;
+		System.out.println("ENTER TIME BETWEEN PAGE RESFRESHES (IN MS). 300-1000 RECOMMENDED.");
+		int sleep = reader.nextInt();
+		System.out.println("WILL REFRESH EVERY " + sleep + "MS.");
+		ChromeSBot sBot = new ChromeSBot(sleep);
 		
-		System.out.println("0 FOR JAR");
+		System.out.println("ENTER 0 IF RUNNING THE JAR. ANYTHING ELSE OTHERWISE.");
 		int i = reader.nextInt();
 		
-		String orderPath;
 		if (i == 0) 
-		{ 
-			orderPath = "./order.txt";
-			try { buildOrder(orderPath); } 
+		{	
+			// properly implement this...
+			System.out.println("(JAR) BUILDING ORDER...");
+			String orderPath = "./order.txt";
+			try { sBot.buildOrderJar(orderPath); } 
 			catch (IOException e) { e.printStackTrace(); }
 		}
-		else 
-		{ 
-			orderPath = "./src/chromeSBot/order.txt";
-			try {
-				buildOrder(orderPath);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}		
+		else {
+			System.out.println("(NOT JAR) BUILDING ORDER...");
+			String orderPath = "./src/chromeSBot/order.txt";
+			try { sBot.buildOrder(orderPath); } 
+			catch (IOException e) { e.printStackTrace(); }
+		}
 		
-		System.out.println("0 FOR TEST");
-	
+		System.out.println("ORDER BUILT.");
+		
+		System.out.println("ENTER 0 IF TESTING. ANYTHING ELSE IF THIS IS FOR REAL.");
 		i = reader.nextInt();
+		
+		if (i == 0) 
+		{
+			
+		}
+		else 
+		{
+			
+		}
 		
 		System.setProperty("webdriver.chrome.driver", "C:\\SeleniumDrivers\\chromedriver.exe");
 		ChromeOptions options = new ChromeOptions();
@@ -107,10 +120,10 @@ public class ChromeSBot {
 		options.addArguments("disable-infobars");
 		WebDriver driver = new ChromeDriver(options);
 		
-		if (i == 0) { addToCart(driver, testOrder, sleep); }
-		else { addToCart(driver, realOrder, sleep); }
+		if (i == 0) { sBot.addToCart(driver, testOrder, sleep); }
+		else { sBot.addToCart(driver, realOrder, sleep); }
 			
-		dummy(driver, dummyOrder);
+//		dummy(driver, dummyOrder);
 		
 		driver.get("https://www.supremenewyork.com/checkout");
 
@@ -119,24 +132,105 @@ public class ChromeSBot {
 
 	}
 	
-	public ChromeSBot() {
-		
+	public ChromeSBot() {}
+	
+	public ChromeSBot(int sleep) 
+	{
+		this.sleep = sleep;
 	}
 	
-	public static void buildOrder(String path) throws IOException {
+	public void buildOrderJar(String path) throws IOException 
+	{
+		return;
+	}
+	
+	private static void setField(Item item, String[] parts)
+	{
+		switch (parts[0]) 
+		{
+			case "name": 
+				item.setName(parts[1]);
+				break;
+			case "number": 
+				// regex match for digits
+				if (parts[1].matches("\\d+")) { item.setNumber(Integer.parseInt(parts[1])); }
+				else { System.out.println("Number field is not a number."); }
+				break;
+//			case "type": 
+//				item.setType(parts[1]);
+//				break;
+			case "colour": 
+				item.setColour(parts[1]);
+				break;
+			case "size": 
+				item.setSize(parts[1]);
+				break;
+		}
+		System.out.println("set field: " + parts[0] + " = " + parts[1]);
+	}
+	
+	public void buildOrder(String path) throws IOException
+	{
 		FileInputStream fis = new FileInputStream(path);
-		//Construct BufferedReader from InputStreamReader
+		// construct bufferedreader from inputstreamreader
 		BufferedReader br = new BufferedReader(new InputStreamReader(fis));
 	 
 		String line = null;
-		while ((line = br.readLine()) != null) {
+		int itemCount = 1;
+		while ((line = br.readLine().trim()) != null)
+		{
+			System.out.println("\n\nITEM NUMBER: " + itemCount + "\n");
 			Item temp = new Item();
-			
+			outer:
+			while (!line.equals("-"))
+			{
+				String[] parts = line.split(":");
+				if (parts.length > 1) 
+				{
+					parts[1] = parts[1].trim();
+					setField(temp, parts);
+				}
+				else 
+				{ 
+					System.out.println("No value for field: " + parts[0]); 
+				}
+				line = br.readLine().trim();
+				if (line != null) { continue; }
+				else
+				{
+					break outer;
+				}
+			}
+			if (temp.isValid()) 
+			{ 
+				System.out.println("ITEM VALID GJ");
+				this.order.add(temp); 
+				itemCount++; 
+				temp.printItem(); 
+			}
+			else 
+			{ 
+				System.out.println("ITEM " + itemCount + " NOT VALID."); 
+				itemCount++;
+				temp.printItem(); 
+			}
 		}
 		br.close();
 	}
 	
-	public static void addItem(Item item) {
+	
+	public void addItem(Item item)
+	{
+		
+	}
+	
+	public void refreshAndGrabLinks()
+	{
+		if (this.order.isEmpty()) { return; }
+		
+	}
+	public void addToCart(Item item)
+	{
 		
 	}
 	
@@ -170,7 +264,8 @@ public class ChromeSBot {
 		return "http://www.supremenewyork.com/shop/all/new";
 	}
 
-	public static void addToCart(WebDriver driver, List<Item> order, int sleepTime) {
+	public void addToCart(WebDriver driver, List<Item> order, int sleepTime) 
+	{
 
 		if (order.isEmpty()) { return; } 
 
@@ -299,7 +394,7 @@ public class ChromeSBot {
 		}
 	}
 
-	public static void dummy(WebDriver driver, List<Item> order) {
+	public void dummy(WebDriver driver, List<Item> order) {
 	
 		if (order.isEmpty()) { return; } 
 	

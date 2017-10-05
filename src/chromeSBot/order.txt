@@ -1,12 +1,34 @@
-skate
-Supreme®/Independent® Truck
-1
+﻿type: skate
+
+name: Supreme®/Independent® Truck
+
+number: 1
+
 -
-jackets
-8
-Red
+
+type: jackets
+
+number: 8
+
+colour: Red
+
+-    
+
+type: tops_sweaters
+
+name: Overlap Tee
+
+number: Medium
+
+colour: Olive
+
 -
-tops_sweaters
-Overlap Tee
-Medium
-Olive
+type: wtf
+name:
+number: 5
+colour: Hi
+-
+type: lol
+colour: blah
+-
+type: idk

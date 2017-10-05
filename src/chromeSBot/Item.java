@@ -1,5 +1,7 @@
 package chromeSBot;
 
+// import java.lang.reflect.Field;
+
 public class Item {
 	
 	private String type;
@@ -55,15 +57,44 @@ public class Item {
 	
 	public String getSize() { return this.size; }
 	
-	public String printProps() {
-		return ""+this.type+";"+this.name+"/"+this.number+";"+this.colour+"/"+this.size;
+	public void printItem() 
+	{
+		System.out.println("Name: " + this.name);
+		System.out.println("Number: " + this.number);
+		System.out.println("Type: " + this.type);
+		System.out.println("Colour: " + this.colour);
+		System.out.println("Size: " + this.size);
 	}
-	/*
-	public static void main(String[] args) {
-		Item dummy = new Item();
-		dummy.setSize("lol");
-		dummy.setNumber(5);
-		System.out.println(dummy.printProps());
-	}*/
+	
+	public boolean isValid()
+	{
+		return !(this.name == null && this.number == -1);
+	}
+	
+	// useless function 
+//	public int numOfNullFields()
+//	{
+//		Field fields[] = this.getClass().getDeclaredFields();
+//		int nullFields = 0;
+//		for (Field f : fields)
+//		{
+//			try
+//			{
+//				Object value = f.get(this);
+//				if (value == null) { nullFields++; }
+//			}
+//			catch (Exception e) { e.printStackTrace(); }
+//		}
+//		return nullFields;
+//	}
+
+	// for testing
+//	public static void main(String[] args) {
+//		Item dummy = new Item();
+//		dummy.setSize("lol");
+////		dummy.setNumber(5);
+//		dummy.printItem();
+//		System.out.println(dummy.isValid());
+//	}
 }
 
