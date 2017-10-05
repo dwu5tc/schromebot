@@ -9,6 +9,7 @@ public class Item {
 	private String name;
 	private String colour;
 	private String size;
+	private String url;
 	
 	public Item() {}
 	
@@ -47,6 +48,8 @@ public class Item {
 	
 	public void setSize(String size) { this.size = size; }
 	
+	public void setUrl(String url) { this.url = url; }
+	
 	public String getType() { return this.type;	}
 	
 	public int getNumber() { return this.number; }
@@ -56,6 +59,8 @@ public class Item {
 	public String getColour() { return this.colour; }
 	
 	public String getSize() { return this.size; }
+	
+	public String getUrl() { return this.url; }
 	
 	public void printItem() 
 	{

@@ -83,15 +83,14 @@ public class ChromeSBot
 		ChromeSBot sBot = new ChromeSBot(sleep);
 		
 		System.out.println("ENTER 0 IF RUNNING THE JAR. ANYTHING ELSE OTHERWISE.");
-		int i = reader.nextInt();
-		
+		int i = reader.nextInt();	
 		if (i == 0) 
 		{	
 			// properly implement this...
-			System.out.println("(JAR) BUILDING ORDER...");
-			String orderPath = "./order.txt";
-			try { sBot.buildOrderJar(orderPath); } 
-			catch (IOException e) { e.printStackTrace(); }
+//			System.out.println("(JAR) BUILDING ORDER...");
+//			String orderPath = "./order.txt";
+//			try { sBot.buildOrderJar(orderPath); } 
+//			catch (IOException e) { e.printStackTrace(); }
 		}
 		else {
 			System.out.println("(NOT JAR) BUILDING ORDER...");
@@ -101,33 +100,42 @@ public class ChromeSBot
 		}
 		
 		System.out.println("ORDER BUILT.");
+		sBot.confirmOrder();
 		
 		System.out.println("ENTER 0 IF TESTING. ANYTHING ELSE IF THIS IS FOR REAL.");
 		i = reader.nextInt();
 		
 		if (i == 0) 
 		{
-			
+			// testing
+			System.setProperty("webdriver.chrome.driver", "C:\\SeleniumDrivers\\chromedriver.exe");
+			ChromeOptions options = new ChromeOptions();
+			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\DSMProfile");
+			options.addArguments("disable-infobars");
+			WebDriver driver = new ChromeDriver(options);
+			sBot.addToCart(driver);
 		}
 		else 
 		{
-			
+			// real 
+			System.setProperty("webdriver.chrome.driver", "C:\\SeleniumDrivers\\chromedriver.exe");
+			ChromeOptions options = new ChromeOptions();
+			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\DSMProfile");
+			options.addArguments("disable-infobars");
+			WebDriver driver = new ChromeDriver(options);
+			sBot.addToCart(driver);
 		}
 		
-		System.setProperty("webdriver.chrome.driver", "C:\\SeleniumDrivers\\chromedriver.exe");
-		ChromeOptions options = new ChromeOptions();
-		options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\DSMProfile");
-		options.addArguments("disable-infobars");
-		WebDriver driver = new ChromeDriver(options);
+
 		
-		if (i == 0) { sBot.addToCart(driver, testOrder, sleep); }
-		else { sBot.addToCart(driver, realOrder, sleep); }
+//		if (i == 0) { sBot.addToCart(driver, testOrder, sleep); }
+//		else { sBot.addToCart(driver, realOrder, sleep); }
 			
 //		dummy(driver, dummyOrder);
 		
-		driver.get("https://www.supremenewyork.com/checkout");
-
-		System.out.println("DONE.");
+//		driver.get("https://www.supremenewyork.com/checkout");
+//
+//		System.out.println("DONE.");
 		reader.close();
 
 	}
@@ -177,11 +185,11 @@ public class ChromeSBot
 	 
 		String line = null;
 		int itemCount = 1;
+		outer:
 		while ((line = br.readLine().trim()) != null)
 		{
-			System.out.println("\n\nITEM NUMBER: " + itemCount + "\n");
+//			System.out.println("\n\nITEM NUMBER: " + itemCount + "\n");
 			Item temp = new Item();
-			outer:
 			while (!line.equals("-"))
 			{
 				String[] parts = line.split(":");
@@ -194,46 +202,130 @@ public class ChromeSBot
 				{ 
 					System.out.println("No value for field: " + parts[0]); 
 				}
-				line = br.readLine().trim();
-				if (line != null) { continue; }
-				else
-				{
-					break outer;
+				if ((line = br.readLine()) != null) 
+				{ 
+					line.trim();
+					continue;
 				}
+				else { break outer;	}
 			}
 			if (temp.isValid()) 
 			{ 
-				System.out.println("ITEM VALID GJ");
+				System.out.println("Item " + itemCount + " is valid.");
 				this.order.add(temp); 
-				itemCount++; 
-				temp.printItem(); 
+				itemCount++;  
 			}
 			else 
 			{ 
-				System.out.println("ITEM " + itemCount + " NOT VALID."); 
+				System.out.println("Item " + itemCount + " is NOT valid."); 
 				itemCount++;
-				temp.printItem(); 
 			}
 		}
 		br.close();
 	}
 	
-	
-	public void addItem(Item item)
+	public void confirmOrder()
 	{
-		
+		int itemCount = 1;
+		for (Item item : this.order) 
+		{
+			System.out.println("----- Item " + itemCount + " -----");
+			item.printItem();
+			System.out.print("\n");
+			itemCount++;
+		}
 	}
 	
-	public void refreshAndGrabLinks()
+	private static void addItem(Item item, WebDriver driver)
+	{
+		if (item.getUrl() != null ) 
+		{
+			driver.get(item.getUrl());
+			
+			// size select
+			if (item.getSize() != null) 
+			{
+				Select sizeSelect = new Select(driver.findElement(By.id("size")));
+				System.out.println(driver.getTitle() + " // Size --> " + item.getSize());
+				sizeSelect.selectByVisibleText(item.getSize());
+			}
+
+			// colour select
+			if (item.getColour() != null) 
+			{
+				WebElement colorSelect = driver.findElement(By.xpath("//a[@data-style-name='" + item.getColour()+"']"));
+				System.out.println(driver.getTitle()+" // Colour --> " + item.getColour());
+				//colorSelect.click();
+				colorSelect.sendKeys(Keys.ENTER);
+			}
+			
+			// add item to cart
+			try 
+			{
+				WebElement addToCart = driver.findElement(By.xpath("//input[@value='add to cart']"));
+				addToCart.sendKeys(Keys.ENTER);
+				addToCart.sendKeys(Keys.ENTER);
+				System.out.println(driver.getTitle() + " // Successfully Carted!");
+			}
+			catch (NoSuchElementException e)
+			{
+				System.out.println(driver.getTitle() + " // Sold Out***");
+			}
+		}
+	}
+
+	public void addToCart(WebDriver driver) 
+	{
+		// cart each item
+		for (Item item : this.order)
+		{
+			addItem(item, driver);
+		}
+		
+		// go to checkout
+		driver.get("https://www.supremenewyork.com/checkout");
+		System.out.println("NAVIGATING TO CHEKOUT.");
+	}
+	
+	public void refreshAndGrabLinks(WebDriver driver)
 	{
 		if (this.order.isEmpty()) { return; }
+		boolean updated = false;
 		
-	}
-	public void addToCart(Item item)
-	{
-		
+		driver.get("http://www.supremenewyork.com/shop/all/new");
+		if (!updated) 
+		{
+			int refreshCount = 0; // 
+			while (updated == false && refreshCount < 200) 
+			{
+				try 
+				{
+					driver.findElement(By.linkText(this.order.get(0).getName()));
+					updated = true;
+					break;
+				}
+				catch (NoSuchElementException e)  
+				{
+					refreshCount++;
+					try { Thread.sleep(this.sleep); } 
+					catch (InterruptedException e1) { e1.printStackTrace(); }
+					driver.navigate().refresh();
+					System.out.println("Refreshed! "+refreshCount);
+				}				
+			}
+		}
+		// grab Urls
+		for (Item item : this.order)
+		{
+//			WebElement itemElem = driver.findElement(By.linkText(item.getName()));
+			WebElement itemElem = driver.findElement(By.xpath("//*[@id=\"container\"]/article["+item.getNumber()+"]/div/h1/a"));
+			String itemUrl = itemElem.getAttribute("href");
+//			this.links.add(itemURL);
+			item.setUrl(itemUrl);
+		}
 	}
 	
+	/*
 	// returns the URL based on item type
 	public static String buildURL(String type) {
 		switch (type) 
@@ -263,7 +355,8 @@ public class ChromeSBot
 		}		
 		return "http://www.supremenewyork.com/shop/all/new";
 	}
-
+	*/
+	
 	public void addToCart(WebDriver driver, List<Item> order, int sleepTime) 
 	{
 
