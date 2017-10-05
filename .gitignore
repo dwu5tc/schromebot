@@ -1,0 +1,9 @@
+.classpath
+.settings
+.project
+.gitignore~
+..gitignore.un~
+/lib
+/selenium
+/bin
+debug.log
