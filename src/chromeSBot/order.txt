@@ -1,34 +1,11 @@
-﻿type: skate
-
-name: Supreme®/Independent® Truck
-
-number: 1
-
--
-
-type: jackets
-
-number: 8
-
-colour: Red
-
--    
-
-type: tops_sweaters
-
-name: Overlap Tee
-
-number: Medium
-
+﻿-
+name: Supreme®/Stone Island® S/S Top
 colour: Olive
+size: Medium
 
 -
-type: wtf
-name:
-number: 5
-colour: Hi
+
+name: Supreme®/Stone Island® Hooded Sweatshirt
+colour: Olive
+size: Medium 
 -
-type: lol
-colour: blah
--
-type: idk

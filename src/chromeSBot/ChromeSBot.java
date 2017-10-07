@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
@@ -21,61 +22,21 @@ import org.openqa.selenium.support.ui.Select;
 
 public class ChromeSBot 
 {
+	// grab links with http request (faster)
+		// first time if refreshing on new, must check for change in elements
+		// new doesn't have the item titles
+	// implement a better way for people to set up the bot and their orders
+	// implement a way to check that people don't share this bot
+	// 
+	// https://stackoverflow.com/questions/33225947/can-a-website-detect-when-you-are-using-selenium-with-chromedriver
 	
 	private List<Item> order = new ArrayList<Item>();
-	private List<String> links = new ArrayList<String>();
+//	private List<String> links = new ArrayList<String>();
 	private int sleep = -1;
 	
 	public static void main(String[] args) 
 	{
-		//http://stackoverflow.com/questions/11908249/debugging-element-is-not-clickable-at-point-error
-		
 		Scanner reader = new Scanner(System.in);
-		
-		List<Item> testOrder = new ArrayList<Item>();
-		List<Item> realOrder = new ArrayList<Item>();
-		List<Item> dummyOrder = new ArrayList<Item>();
-		
-//		Item hanes = new Item("accessories");
-//		hanes.getNumber() = 3;
-//		hanes.getSize() = "Large";
-//
-//		Item pillow = new Item("accessories");
-//		pillow.getNumber() = 1;
-		
-//		Item stonewash = new Item("pants");
-//		stonewash.getNumber() = 26;
-//		stonewash.getSize() = "34";
-//		
-		Item dummy = new Item("pants");
-		dummy.setNumber(1);
-		
-		Item testOne = new Item("skate");
-		testOne.setName("Supreme®/Independent® Truck");
-		testOne.setNumber(1);
-		
-		Item testTwo = new Item("jackets");
-		testTwo.setNumber(8);
-		testTwo.setColour("Red");
-		
-		/*
-		Item two = new Item("tops_sweaters");
-		two.name = "Overlap Tee";
-		two.getSize() = "Medium";
-		two.getColour() = "Olive";
-		*/
-		
-		Item one = new Item("shoes");
-		one.setName("Supreme®/Nike Air More Uptempo");
-		one.setSize("8");
-//		one.getNumber() = 4;
-		one.setColour("Black");
-		
-		testOrder.add(testOne);
-		testOrder.add(testTwo);
-		realOrder.add(one);
-//		realOrder.add(two);
-		dummyOrder.add(dummy);
 		
 		System.out.println("ENTER TIME BETWEEN PAGE RESFRESHES (IN MS). 300-1000 RECOMMENDED.");
 		int sleep = reader.nextInt();
@@ -105,39 +66,27 @@ public class ChromeSBot
 		System.out.println("ENTER 0 IF TESTING. ANYTHING ELSE IF THIS IS FOR REAL.");
 		i = reader.nextInt();
 		
+		System.setProperty("webdriver.chrome.driver", "C:\\SeleniumDrivers\\10052017\\chromedriver.exe");
+		ChromeOptions options = new ChromeOptions();
+//		options.addArguments("disable-infobars");
 		if (i == 0) 
 		{
 			// testing
-			System.setProperty("webdriver.chrome.driver", "C:\\SeleniumDrivers\\chromedriver.exe");
-			ChromeOptions options = new ChromeOptions();
+//			options.setExperimentalOption("excludeSwitches", Collections.singletonList("enable-automation"));
 			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\DSMProfile");
-			options.addArguments("disable-infobars");
-			WebDriver driver = new ChromeDriver(options);
-			sBot.addToCart(driver);
 		}
 		else 
 		{
-			// real 
-			System.setProperty("webdriver.chrome.driver", "C:\\SeleniumDrivers\\chromedriver.exe");
-			ChromeOptions options = new ChromeOptions();
-			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\DSMProfile");
-			options.addArguments("disable-infobars");
-			WebDriver driver = new ChromeDriver(options);
-			sBot.addToCart(driver);
+			// real
+//			options.setExperimentalOption("excludeSwitches", Collections.singletonList("enable-automation"));
+			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\AutomationProfile");
 		}
-		
-
-		
-//		if (i == 0) { sBot.addToCart(driver, testOrder, sleep); }
-//		else { sBot.addToCart(driver, realOrder, sleep); }
-			
-//		dummy(driver, dummyOrder);
-		
-//		driver.get("https://www.supremenewyork.com/checkout");
-//
-//		System.out.println("DONE.");
+		options.addArguments("disable-infobars");
+		WebDriver driver = new ChromeDriver(options);
+		driver.get("http://www.stackoverflow.com");
+		sBot.refreshAndGrabLinks(driver);
+		sBot.addToCart(driver);		
 		reader.close();
-
 	}
 	
 	public ChromeSBot() {}
@@ -186,8 +135,9 @@ public class ChromeSBot
 		String line = null;
 		int itemCount = 1;
 		outer:
-		while ((line = br.readLine().trim()) != null)
+		while ((line = br.readLine()) != null)
 		{
+			line = line.trim();
 //			System.out.println("\n\nITEM NUMBER: " + itemCount + "\n");
 			Item temp = new Item();
 			while (!line.equals("-"))
@@ -240,6 +190,7 @@ public class ChromeSBot
 	{
 		if (item.getUrl() != null ) 
 		{
+			System.out.println(item.getUrl());
 			driver.get(item.getUrl());
 			
 			// size select
@@ -280,19 +231,26 @@ public class ChromeSBot
 		for (Item item : this.order)
 		{
 			addItem(item, driver);
+			System.out.println("Added.");
 		}
 		
 		// go to checkout
 		driver.get("https://www.supremenewyork.com/checkout");
-		System.out.println("NAVIGATING TO CHEKOUT.");
+		System.out.println("NAVIGATING TO CHECKOUT.");
 	}
 	
 	public void refreshAndGrabLinks(WebDriver driver)
 	{
-		if (this.order.isEmpty()) { return; }
+		if (this.order.isEmpty()) 
+		{ 
+			System.out.println("order empty");
+			return; 
+		}
 		boolean updated = false;
 		
 		driver.get("http://www.supremenewyork.com/shop/all/new");
+		System.out.println(driver.getTitle());
+		System.out.println("Here");
 		if (!updated) 
 		{
 			int refreshCount = 0; // 
@@ -317,295 +275,32 @@ public class ChromeSBot
 		// grab Urls
 		for (Item item : this.order)
 		{
-//			WebElement itemElem = driver.findElement(By.linkText(item.getName()));
-			WebElement itemElem = driver.findElement(By.xpath("//*[@id=\"container\"]/article["+item.getNumber()+"]/div/h1/a"));
-			String itemUrl = itemElem.getAttribute("href");
-//			this.links.add(itemURL);
-			item.setUrl(itemUrl);
-		}
-	}
-	
-	/*
-	// returns the URL based on item type
-	public static String buildURL(String type) {
-		switch (type) 
-		{
-		case "shoes":
-			return "http://www.supremenewyork.com/shop/all/shoes";
-		case "sweatshirts":
-			return "http://www.supremenewyork.com/shop/all/sweatshirts";
-		case "t-shirts":
-			return "http://www.supremenewyork.com/shop/all/t-shirts";
-		case "jackets":
-			return "http://www.supremenewyork.com/shop/all/jackets";
-		case "accessories":
-			return "http://www.supremenewyork.com/shop/all/accessories";
-		case "hats":
-			return "http://www.supremenewyork.com/shop/all/hats";
-		case "tops_sweaters":
-			return "http://www.supremenewyork.com/shop/all/tops_sweaters";
-		case "shirts":
-			return "http://www.supremenewyork.com/shop/all/shirts";
-		case "bags":
-			return "http://www.supremenewyork.com/shop/all/bags";
-		case "pants":
-			return "http://www.supremenewyork.com/shop/all/pants";
-		case "skate":
-			return "http://www.supremenewyork.com/shop/all/skate";
-		}		
-		return "http://www.supremenewyork.com/shop/all/new";
-	}
-	*/
-	
-	public void addToCart(WebDriver driver, List<Item> order, int sleepTime) 
-	{
-
-		if (order.isEmpty()) { return; } 
-
-		boolean updated = false;
-		Iterator<Item> iterator = order.iterator();
-
-		while (iterator.hasNext())
-		{	
-			Item curr = iterator.next();
-			
-			driver.get(buildURL(curr.getType()));
-			/*
-			 *	STORE NOT YET UPDATED	
-			 */ 
-
-			if (!updated) 
+			if (item.getNumber() != -1)
 			{
-				int count = 0;
-				while (updated == false && count < 2000) 
+				try
 				{
-					try 
-					{
-						WebElement item = driver.findElement(By.linkText(curr.getName()));
-						//WebElement item = driver.findElement(By.xpath("//*[@id=\"container\"]/article["+curr.getNumber()+"]/div/h1/a"));
-						String item_URL = item.getAttribute("href");
-						driver.get(item_URL);
-						
-//						try {
-//							Thread.sleep(1000);
-//						} catch (InterruptedException e1) {
-//							// TODO Auto-generated catch block
-//							e1.printStackTrace();
-//						}
-						
-//						item.sendKeys(Keys.ENTER);
-//						item.click();
-						updated = true;
-						break;
-					}
-					catch (NoSuchElementException e)  
-					{
-						count++;
-						
-						try { Thread.sleep(sleepTime); } 
-						catch (InterruptedException e1) { e1.printStackTrace(); }
-						driver.navigate().refresh();
-						
-						System.out.println("Refreshed! "+count);
-					}				
+					WebElement itemElem = driver.findElement(By.xpath("//*[@id=\"container\"]/article["+item.getNumber()+"]/div/h1/a"));
+					String itemUrl = itemElem.getAttribute("href");
+					System.out.println("Got Url: " + itemUrl);
+					item.setUrl(itemUrl);
+//					this.links.add(itemURL);
 				}
-				
-//				driver.get("http://www.supremenewyork.com/shop/accessories/l1csjivrd/i9co4nsrv");
-				
-				if (curr.getColour() != null) 
-				{
-					WebElement colorSelect = driver.findElement(By.xpath("//a[@data-style-name='"+curr.getColour()+"']"));
-					System.out.println(driver.getTitle()+" // Colour --> "+curr.getColour());
-					//colorSelect.click();
-					colorSelect.sendKeys(Keys.ENTER);
-				}
-				
-				if (curr.getSize() != null) 
-				{
-					Select sizeSelect = new Select(driver.findElement(By.id("size")));
-					System.out.println(driver.getTitle()+" // Size --> "+curr.getSize());
-					sizeSelect.selectByVisibleText(curr.getSize());
-				}
-				
-				try 
-				{
-					WebElement addToCart = driver.findElement(By.xpath("//input[@value='add to cart']"));
-					//addToCart.click();
-					addToCart.sendKeys(Keys.ENTER);
-					addToCart.sendKeys(Keys.ENTER);
-					System.out.println(driver.getTitle()+" // Successfully Carted!");
-				}
-				catch (NoSuchElementException e)
-				{
-					System.out.println(driver.getTitle()+" // Sold Out***");
-				}
+				catch (NoSuchElementException e) { e.printStackTrace(); }
 			}
-			/*
-			 *	STORE HAS NOW BEEN UPDATED	
-			 */ 
-			else 
-			{
-				WebElement item = driver.findElement(By.xpath("//*[@id=\"container\"]/article["+curr.getNumber()+"]/div/h1/a"));
-				String item_URL = item.getAttribute("href");
-				driver.get(item_URL);
-				
-//				try {
-//					Thread.sleep(1000);
-//				} catch (InterruptedException e1) {
-//					// TODO Auto-generated catch block
-//					e1.printStackTrace();
-//				}
-				
-				if (curr.getColour() != null) 
+			else  
+			{ 
+				try
 				{
-					WebElement colorSelect = driver.findElement(By.xpath("//a[@data-style-name='"+curr.getColour()+"']"));
-					System.out.println(driver.getTitle()+" // Colour --> "+curr.getColour());
-					//colorSelect.click();
-					colorSelect.sendKeys(Keys.ENTER);
+					WebElement itemElem = driver.findElement(By.linkText(item.getName()));
+					String itemUrl = itemElem.getAttribute("href");
+					System.out.println("Got Url: " + itemUrl);
+					item.setUrl(itemUrl);
+//					this.links.add(itemURL);
 				}
-				
-				if (curr.getSize() != null) 
-				{
-					Select sizeSelect = new Select(driver.findElement(By.id("size")));
-					System.out.println(driver.getTitle()+" // Size --> "+curr.getSize());
-					sizeSelect.selectByVisibleText(curr.getSize());
-				}
-				
-				try 
-				{
-					WebElement addToCart = driver.findElement(By.xpath("//input[@value='add to cart']"));
-					//addToCart.click();
-					addToCart.sendKeys(Keys.ENTER);
-					addToCart.sendKeys(Keys.ENTER);
-					System.out.println(driver.getTitle()+" // Successfully Carted!");
-				}
-				catch (NoSuchElementException e)
-				{
-					System.out.println(driver.getTitle()+" // Sold Out***");
-				}
-			}
+				catch (NoSuchElementException e) { e.printStackTrace(); }
+			}	
 		}
 	}
-
-	public void dummy(WebDriver driver, List<Item> order) {
-	
-		if (order.isEmpty()) { return; } 
-	
-		Iterator<Item> iterator = order.iterator();
-	
-		while (iterator.hasNext())
-		{	
-			Item curr = iterator.next();
-			
-			driver.get(buildURL(curr.getType()));
-	
-			/*
-			 *	STORE NOT YET UPDATED	
-			 */ 
-//			if (!updated) 
-//			{
-//				int count = 0;
-//				while (updated == false && count < 2000) 
-//				{
-//					try 
-//					{
-//						WebElement item = driver.findElement(By.xpath("//*[@id=\"container\"]/article["+curr.getNumber()+"]/div/h1/a"));
-//						String item_URL = item.getAttribute("href");
-//						driver.get(item_URL);
-//						
-//	//					try {
-//	//						Thread.sleep(1000);
-//	//					} catch (InterruptedException e1) {
-//	//						// TODO Auto-generated catch block
-//	//						e1.printStackTrace();
-//	//					}
-//						
-//	//					item.sendKeys(Keys.ENTER);
-//	//					item.click();
-//						updated = true;
-//						break;
-//					}
-//					catch (NoSuchElementException e)  
-//					{
-//						count++;
-//						driver.navigate().refresh();
-//						System.out.println("Refreshed! "+count);
-//					}				
-//				}
-//				
-//	//			driver.get("http://www.supremenewyork.com/shop/accessories/l1csjivrd/i9co4nsrv");
-//				
-//				if (curr.getColour() != null) 
-//				{
-//					WebElement colorSelect = driver.findElement(By.xpath("//a[@data-style-name='"+curr.getColour()+"']"));
-//					System.out.println(driver.getTitle()+" COLOUR OPTION 1");
-//					//colorSelect.click();
-//					colorSelect.sendKeys(Keys.ENTER);
-//				}
-//				
-//				if (curr.getSize() != null) 
-//				{
-//					Select sizeSelect = new Select(driver.findElement(By.id("size")));
-//					System.out.println(driver.getTitle()+" SIZE OPTION 1");
-//					sizeSelect.selectByVisibleText(curr.getSize());
-//				}
-//				
-//				try 
-//				{
-//					WebElement addToCart = driver.findElement(By.xpath("//input[@value='add to cart']"));
-//					//addToCart.click();
-//					addToCart.sendKeys(Keys.ENTER);
-//					addToCart.sendKeys(Keys.ENTER);
-//				}
-//				catch (NoSuchElementException e)
-//				{
-//					System.out.println("SOLD OUT");
-//				}
-//			}
-//			/*
-//			 *	STORE HAS NOW BEEN UPDATED	
-//			 */ 
-//			else 
-//			{
-//				WebElement item = driver.findElement(By.xpath("//*[@id=\"container\"]/article["+curr.getNumber()+"]/div/h1/a"));
-//				String item_URL = item.getAttribute("href");
-//				driver.get(item_URL);
-//				
-//	//			try {
-//	//				Thread.sleep(1000);
-//	//			} catch (InterruptedException e1) {
-//	//				// TODO Auto-generated catch block
-//	//				e1.printStackTrace();
-//	//			}
-//				
-//				if (curr.getColour() != null) 
-//				{
-//					WebElement colorSelect = driver.findElement(By.xpath("//a[@data-style-name='"+curr.getColour()+"']"));
-//					System.out.println(driver.getTitle()+" COLOUR OPTION 2");
-//					//colorSelect.click();
-//					colorSelect.sendKeys(Keys.ENTER);
-//				}
-//				
-//				if (curr.getSize() != null) 
-//				{
-//					Select sizeSelect = new Select(driver.findElement(By.id("size")));
-//					System.out.println(driver.getTitle()+" SIZE OPTION 2");
-//					sizeSelect.selectByVisibleText(curr.getSize());
-//				}
-//				
-//				try 
-//				{
-//					WebElement addToCart = driver.findElement(By.xpath("//input[@value='add to cart']"));
-//					//addToCart.click();
-//					addToCart.sendKeys(Keys.ENTER);
-//					addToCart.sendKeys(Keys.ENTER);
-//				}
-//				catch (NoSuchElementException e)
-//				{
-//					System.out.println("SOLD OUT");
-//				}
-			}
-		}
 }
 
 
