@@ -5,9 +5,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
+//import java.util.Collections;
+//import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
@@ -55,7 +57,7 @@ public class ChromeSBot
 		}
 		else {
 			System.out.println("(NOT JAR) BUILDING ORDER...");
-			String orderPath = "./src/chromeSBot/order.txt";
+			String orderPath = "./src/chromeSBot/orderTest.txt";
 			try { sBot.buildOrder(orderPath); } 
 			catch (IOException e) { e.printStackTrace(); }
 		}
@@ -83,9 +85,35 @@ public class ChromeSBot
 		}
 		options.addArguments("disable-infobars");
 		WebDriver driver = new ChromeDriver(options);
-		driver.get("http://www.stackoverflow.com");
-		sBot.refreshAndGrabLinks(driver);
-		sBot.addToCart(driver);		
+//		driver.get("http://www.stackoverflow.com");
+		String body;
+		try 
+		{ 
+			body = sBot.sendGET("http://www.supremenewyork.com/shop/new"); 
+			System.out.println(body);
+			boolean isUpdated = false;
+			int attemptNum = 1;
+			while (!isUpdated)
+			{
+				String temp = sBot.sendGET("http://www.supremenewyork.com/shop/new");
+				if (attemptNum < 5 && body.equals(temp)) 
+				{
+					System.out.println(attemptNum + " :: NOT UPDATED");
+				}
+				else 
+				{
+					isUpdated = true;
+					sBot.refreshAndGrabLinks(driver);
+					sBot.addToCart(driver);	
+					break;
+				}
+				Thread.sleep(1000);
+				attemptNum++;
+			}
+		}
+		catch (Exception e) { e.printStackTrace(); }
+		
+	
 		reader.close();
 	}
 	
@@ -101,6 +129,15 @@ public class ChromeSBot
 		return;
 	}
 	
+	/*private static List<String> parseForLinks(String body) 
+	{
+		List<String> links = new ArrayList<String>();
+		
+	}*/
+	
+	// used by buildOrder
+	// sets the order field
+	// parts[0] should be the key and parts[1] should be the value
 	private static void setField(Item item, String[] parts)
 	{
 		switch (parts[0]) 
@@ -125,7 +162,9 @@ public class ChromeSBot
 		}
 		System.out.println("set field: " + parts[0] + " = " + parts[1]);
 	}
-	
+	 
+	// sets the order property of the sBot instance
+	// reads a file from specified path
 	public void buildOrder(String path) throws IOException
 	{
 		FileInputStream fis = new FileInputStream(path);
@@ -174,6 +213,7 @@ public class ChromeSBot
 		br.close();
 	}
 	
+	// prints the order nicely for user to see
 	public void confirmOrder()
 	{
 		int itemCount = 1;
@@ -186,6 +226,8 @@ public class ChromeSBot
 		}
 	}
 	
+	// used by addToCart
+	// navigates to URL, checks size, adds to cart
 	private static void addItem(Item item, WebDriver driver)
 	{
 		if (item.getUrl() != null ) 
@@ -224,12 +266,45 @@ public class ChromeSBot
 			}
 		}
 	}
-
+	
+	// returns URL for specific item type
+	private static String getRefreshPage(Item item) 
+	{
+		switch (item.getType()) 
+ 		{
+ 		case "jackets":
+ 			return "http://www.supremenewyork.com/shop/all/jackets";
+ 		case "shirts":
+ 			return "http://www.supremenewyork.com/shop/all/shirts";
+ 		case "tops_sweaters":
+ 			return "http://www.supremenewyork.com/shop/all/tops_sweaters";
+ 		case "sweatshirts":
+ 			return "http://www.supremenewyork.com/shop/all/sweatshirts";
+ 		case "t-shirts":
+ 			return "http://www.supremenewyork.com/shop/all/t-shirts";
+ 		case "pants":
+ 			return "http://www.supremenewyork.com/shop/all/pants";
+ 		case "hats":
+ 			return "http://www.supremenewyork.com/shop/all/hats";
+ 		case "bags":
+ 			return "http://www.supremenewyork.com/shop/all/bags";
+ 		case "accessories":
+ 			return "http://www.supremenewyork.com/shop/all/accessories";
+ 		case "skate":
+ 			return "http://www.supremenewyork.com/shop/all/skate";
+ 		case "shoes":
+ 			return "http://www.supremenewyork.com/shop/all/shoes";
+ 		}		
+ 		return "http://www.supremenewyork.com/shop/all/new";
+ 	}
+	
+	// iterates through each item and calls addToCart on each
 	public void addToCart(WebDriver driver) 
 	{
 		// cart each item
 		for (Item item : this.order)
 		{
+			driver.findElement(By.cssSelector("body")).sendKeys(Keys.CONTROL +"T");
 			addItem(item, driver);
 			System.out.println("Added.");
 		}
@@ -239,39 +314,86 @@ public class ChromeSBot
 		System.out.println("NAVIGATING TO CHECKOUT.");
 	}
 	
+	// check if the webstore has updated
+	public boolean checkUpdate() 
+	{
+		return true;
+	}
+	
+	// sends a GET request to supreme and returns the stringified HTML body
+	public String sendGET(String getURL) throws IOException 
+	{
+		URL obj = new URL(getURL);
+		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+		con.setRequestMethod("GET");
+		con.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
+		int responseCode = con.getResponseCode();
+		System.out.println("GET Response Code :: " + responseCode);
+		if (responseCode == HttpURLConnection.HTTP_OK) 
+		{
+			BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+			String inputLine;
+			StringBuffer response = new StringBuffer();
+//			int lineNum = 0;
+			while ((inputLine = in.readLine()) != null ) 
+			{
+				response.append(inputLine);
+//				System.out.println(lineNum + ": " + inputLine);
+//				lineNum++;
+			}
+			in.close();
+			return response.toString();
+		}
+		else 
+		{
+			System.out.println("GET REQUEST FAILED.");
+			return null;
+		}
+	}
+	
 	public void refreshAndGrabLinks(WebDriver driver)
 	{
-		if (this.order.isEmpty()) 
-		{ 
-			System.out.println("order empty");
-			return; 
-		}
-		boolean updated = false;
-		
+//		if (this.order.isEmpty()) 
+//		{ 
+//			System.out.println("order empty");
+//			return; 
+//		}
+//		boolean updated = false;
+//		
 		driver.get("http://www.supremenewyork.com/shop/all/new");
 		System.out.println(driver.getTitle());
 		System.out.println("Here");
-		if (!updated) 
-		{
-			int refreshCount = 0; // 
-			while (updated == false && refreshCount < 200) 
-			{
-				try 
-				{
-					driver.findElement(By.linkText(this.order.get(0).getName()));
-					updated = true;
-					break;
-				}
-				catch (NoSuchElementException e)  
-				{
-					refreshCount++;
-					try { Thread.sleep(this.sleep); } 
-					catch (InterruptedException e1) { e1.printStackTrace(); }
-					driver.navigate().refresh();
-					System.out.println("Refreshed! "+refreshCount);
-				}				
-			}
-		}
+		System.out.println(driver.getPageSource());
+		driver.get("http://www.supremenewyork.com/shop/all/new");
+		System.out.println(driver.getTitle());
+		System.out.println("Here");
+		System.out.println(driver.getPageSource());
+		driver.get("http://www.supremenewyork.com/shop/all/new");
+		System.out.println(driver.getTitle());
+		System.out.println("Here");
+		System.out.println(driver.getPageSource());
+//		if (!updated) 
+//		{
+//			int refreshCount = 0; // 
+//			while (updated == false && refreshCount < 200) 
+//			{
+//				try 
+//				{
+//					driver.findElement(By.linkText(this.order.get(0).getName()));
+//					updated = true;
+//					break;
+//				}
+//				catch (NoSuchElementException e)  
+//				{
+//					refreshCount++;
+//					try { Thread.sleep(this.sleep); } 
+//					catch (InterruptedException e1) { e1.printStackTrace(); }
+//					driver.navigate().refresh();
+//					System.out.println("Refreshed! "+refreshCount);
+//				}				
+//			}
+//		}
+		
 		// grab Urls
 		for (Item item : this.order)
 		{
@@ -279,6 +401,7 @@ public class ChromeSBot
 			{
 				try
 				{
+					System.out.println(driver.getPageSource());
 					WebElement itemElem = driver.findElement(By.xpath("//*[@id=\"container\"]/article["+item.getNumber()+"]/div/h1/a"));
 					String itemUrl = itemElem.getAttribute("href");
 					System.out.println("Got Url: " + itemUrl);

@@ -1,5 +1,6 @@
 ﻿-
 name: Supreme®/Stone Island® S/S Top
+type: tops_sweaters
 colour: Olive
 size: Medium
 
