@@ -5,17 +5,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
-//import java.util.Collections;
-//import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
@@ -25,6 +20,7 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.Select;
+import org.openqa.selenium.JavascriptExecutor;
 
 public class ChromeSBot 
 {
@@ -39,7 +35,8 @@ public class ChromeSBot
 	private List<Item> order = new ArrayList<Item>();
 //	private List<String> links = new ArrayList<String>();
 	private WebDriver driver;
-	private String staleURL;
+	private String staleLink;
+	private Elements freshLinks;
 	private int sleep = 300;
 	
 	public static void main(String[] args) 
@@ -49,9 +46,11 @@ public class ChromeSBot
 		System.out.println("ENTER TIME BETWEEN PAGE RESFRESHES (IN MS). 300-1000 RECOMMENDED.");
 		int sleep = reader.nextInt();
 		System.out.println("WILL REFRESH EVERY " + sleep + "MS.");
-		ChromeSBot sBot = new ChromeSBot(sleep);
+		ChromeSBot sBot = new ChromeSBot(sleep, false);
+			
+		sBot.grabStaleLink();
 		
-		System.out.println("ENTER 0 IF RUNNING THE JAR. ANYTHING ELSE OTHERWISE.");
+		System.out.println("ENTER 0 IF RUNNING THE JAR. ENTER ANYTHING ELSE OTHERWISE.");
 		int i = reader.nextInt();	
 		if (i == 0) 
 		{	
@@ -71,139 +70,95 @@ public class ChromeSBot
 		System.out.println("ORDER BUILT.");
 		sBot.confirmOrder();
 		
-		System.out.println("ENTER 0 IF TESTING. ANYTHING ELSE IF THIS IS FOR REAL.");
+		System.out.println("ENTER ANYTHING TO BEGIN REFRESHING.");
 		i = reader.nextInt();
 		
-		System.setProperty("webdriver.chrome.driver", "C:\\SeleniumDrivers\\10052017\\chromedriver.exe");
-		ChromeOptions options = new ChromeOptions();
-//		options.addArguments("disable-infobars");
-		if (i == 0) 
-		{
-			// testing
-//			options.setExperimentalOption("excludeSwitches", Collections.singletonList("enable-automation"));
-			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\DSMProfile");
-		}
-		else 
-		{
-			// real
-//			options.setExperimentalOption("excludeSwitches", Collections.singletonList("enable-automation"));
-			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\AutomationProfile");
-		}
-		options.addArguments("disable-infobars");
-		WebDriver driver = new ChromeDriver(options);
-		
-		
-		try 
-		{
-			Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/new").get();
-			Elements links = doc.select("div.turbolink_scroller a");
-		
-	        print("\nLinks: (%d)", links.size()); 
-	        for (Element link : links) {
-	            print(" * a: <%s>  (%s)", link.attr("abs:href"), link.text(), 35);
-	        }
-		}
-		catch (Exception e)
-		{
-			System.out.println("wtf");
-		}
-
-        
-		
-		
-		
-		
+		sBot.refreshPage();
+		sBot.addToCart();
+		sBot.checkout();
+   
 //		driver.get("http://www.stackoverflow.com");
-		String body;
-		try 
-		{ 
-			body = sBot.sendGET("http://www.supremenewyork.com/shop/new"); 
-			System.out.println(body);
-			boolean isUpdated = false;
-			int attemptNum = 1;
-			while (!isUpdated)
-			{
-				String temp = sBot.sendGET("http://www.supremenewyork.com/shop/new");
-				if (attemptNum < 5 && body.equals(temp)) 
-				{
-					System.out.println(attemptNum + " :: NOT UPDATED");
-				}
-				else 
-				{
-					isUpdated = true;
-					sBot.refreshAndGrabLinks(driver);
-					sBot.addToCart(driver);	
-					break;
-				}
-				Thread.sleep(1000);
-				attemptNum++;
-			}
-		}
-		catch (Exception e) { e.printStackTrace(); }
-		
+
 	
 		reader.close();
 	}
 	
-	public ChromeSBot(int sleep) 
+	// constructor
+	public ChromeSBot(int sleep, boolean isReal) 
 	{
 		this.sleep = sleep;
 		System.setProperty("webdriver.chrome.driver", "C:\\SeleniumDrivers\\10052017\\chromedriver.exe");
 		ChromeOptions options = new ChromeOptions();
-		options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\AutomationProfile");
+		if (isReal) 
+		{ 
+			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\AutomationProfile"); 
+		}
+		else 
+		{ 
+			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\DSMProfile"); 
+		}
 		options.addArguments("disable-infobars");
 		this.driver = new ChromeDriver(options);
 	}
 	
-	private static void print(String msg, Object... args) {
-        System.out.println(String.format(msg, args));
-    }
-	
-	public void buildOrderJar(String path) throws IOException 
+	// sets this.staleLink to the first product link of the /new page
+	private void grabStaleLink() 
 	{
-		return;
-	}
-	
-	public static void grabLinkz() throws IOException {
-
-	}
-	
-	/*private static List<String> parseForLinks(String body) 
-	{
-		List<String> links = new ArrayList<String>();
-		
-	}*/
-	
-	// used by buildOrder
-	// sets the order field
-	// parts[0] should be the key and parts[1] should be the value
-	private static void setField(Item item, String[] parts)
-	{
-		switch (parts[0]) 
+		try 
 		{
-			case "name": 
-				item.setName(parts[1]);
-				break;
-			case "number": 
-				// regex match for digits
-				if (parts[1].matches("\\d+")) { item.setNumber(Integer.parseInt(parts[1])); }
-				else { System.out.println("Number field is not a number."); }
-				break;
-//			case "type": 
-//				item.setType(parts[1]);
-//				break;
-			case "colour": 
-				item.setColour(parts[1]);
-				break;
-			case "size": 
-				item.setSize(parts[1]);
-				break;
+			Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/new").get();
+			Elements links = doc.select("div.turbolink_scroller a");
+			this.staleLink = links.eq(0).attr("abs:href");
+			System.out.println("STALE LINK SET: " + this.staleLink);
 		}
-		System.out.println("set field: " + parts[0] + " = " + parts[1]);
+		catch (Exception e)
+		{
+			System.out.println("Error in grabStaleLink.");
+		}
 	}
-	 
-	// sets the order property of the sBot instance
-	// reads a file from specified path
+	
+	// continually checks the /new page for updated links
+	// updates this.freshLinks when the first first product link DOESN'T match this.staleLink
+	private void refreshPage()
+	{
+		boolean notUpdated = true;
+		int attemptNum = 1;
+		while (notUpdated) 
+		{
+			try 
+			{
+				Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/new").get();
+				Elements links = doc.select("div.turbolink_scroller a");
+				if (!links.eq(0).attr("abs:href").equals(this.staleLink)) // not equal
+				{
+					notUpdated = false;
+					this.freshLinks = links;
+					System.out.println("SHOP HAS BEEN UPDATED.");
+					break; // redundant
+				}
+				else 
+				{
+					try 
+					{ 
+						System.out.println("REFRESHING " + attemptNum + ". SHOP NOT UPDATED");
+						Thread.sleep(this.sleep); 
+						attemptNum++;
+					}
+					catch (Exception e) 
+					{ 
+						System.out.println("Error in nested try-catch of refreshPage."); 
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				System.out.println("Error in refreshPage.");
+			}
+		}
+	}
+	
+	// sets the order property
+	// reads a file from specified (hardcoded) path
 	public void buildOrder(String path) throws IOException
 	{
 		FileInputStream fis = new FileInputStream(path);
@@ -252,6 +207,40 @@ public class ChromeSBot
 		br.close();
 	}
 	
+	// buildOrder but for the JAR 
+	public void buildOrderJar(String path) throws IOException 
+	{
+		return;
+	}
+	
+	// used by buildOrder
+	// sets the order field
+	// parts[0] should be the key and parts[1] should be the value
+	private static void setField(Item item, String[] parts)
+	{
+		switch (parts[0]) 
+		{
+			case "name": 
+				item.setName(parts[1]);
+				break;
+			case "number": 
+				// regex match for digits
+				if (parts[1].matches("\\d+")) { item.setNumber(Integer.parseInt(parts[1])); }
+				else { System.out.println("Number field is not a number."); }
+				break;
+//				case "type": 
+//					item.setType(parts[1]);
+//					break;
+			case "colour": 
+				item.setColour(parts[1]);
+				break;
+			case "size": 
+				item.setSize(parts[1]);
+				break;
+		}
+		System.out.println("set field: " + parts[0] + " = " + parts[1]);
+	}
+	
 	// prints the order nicely for user to see
 	public void confirmOrder()
 	{
@@ -265,28 +254,43 @@ public class ChromeSBot
 		}
 	}
 	
-	// used by addToCart
-	// navigates to URL, checks size, adds to cart
-	private static void addItem(Item item, WebDriver driver)
+	// iterates through each item and calls addToCart on each
+	public void addToCart() 
 	{
-		if (item.getUrl() != null ) 
+		// cart each item
+		for (Item item : this.order)
 		{
-			System.out.println(item.getUrl());
-			driver.get(item.getUrl());
+			addItem(item);
+			System.out.println("Added.");
+		}
+	}
+
+	//used by addToCart
+	// navigates to URL, checks size, adds to cart
+	private void addItem(Item item)
+	{
+		String targetLink = this.freshLinks.eq(item.getNumber()).attr("abs:href");
+		if (targetLink != null ) 
+		{
+			((JavascriptExecutor) this.driver).executeScript("window.open('','_blank');");
+			ArrayList<String> tabs = new ArrayList<String> (this.driver.getWindowHandles());
+			this.driver.switchTo().window(tabs.get(tabs.size()-1));
+			System.out.println("NAVIGATING TO: " + item.getUrl());
+			this.driver.get(targetLink);
 			
 			// size select
 			if (item.getSize() != null) 
 			{
-				Select sizeSelect = new Select(driver.findElement(By.id("size")));
-				System.out.println(driver.getTitle() + " // Size --> " + item.getSize());
+				Select sizeSelect = new Select(this.driver.findElement(By.id("size")));
+				System.out.println(this.driver.getTitle() + " // Size --> " + item.getSize());
 				sizeSelect.selectByVisibleText(item.getSize());
 			}
 
 			// colour select
 			if (item.getColour() != null) 
 			{
-				WebElement colorSelect = driver.findElement(By.xpath("//a[@data-style-name='" + item.getColour()+"']"));
-				System.out.println(driver.getTitle()+" // Colour --> " + item.getColour());
+				WebElement colorSelect = this.driver.findElement(By.xpath("//a[@data-style-name='" + item.getColour()+"']"));
+				System.out.println(this.driver.getTitle()+" // Colour --> " + item.getColour());
 				//colorSelect.click();
 				colorSelect.sendKeys(Keys.ENTER);
 			}
@@ -294,174 +298,31 @@ public class ChromeSBot
 			// add item to cart
 			try 
 			{
-				WebElement addToCart = driver.findElement(By.xpath("//input[@value='add to cart']"));
+				WebElement addToCart = this.driver.findElement(By.xpath("//input[@value='add to cart']"));
 				addToCart.sendKeys(Keys.ENTER);
 				addToCart.sendKeys(Keys.ENTER);
-				System.out.println(driver.getTitle() + " // Successfully Carted!");
+				System.out.println(this.driver.getTitle() + " // Successfully Carted!");
 			}
 			catch (NoSuchElementException e)
 			{
-				System.out.println(driver.getTitle() + " // Sold Out***");
+				System.out.println(this.driver.getTitle() + " // Sold Out***");
 			}
 		}
 	}
 	
-	// returns URL for specific item type
-	private static String getRefreshPage(Item item) 
+	private void checkout() 
 	{
-		switch (item.getType()) 
- 		{
- 		case "jackets":
- 			return "http://www.supremenewyork.com/shop/all/jackets";
- 		case "shirts":
- 			return "http://www.supremenewyork.com/shop/all/shirts";
- 		case "tops_sweaters":
- 			return "http://www.supremenewyork.com/shop/all/tops_sweaters";
- 		case "sweatshirts":
- 			return "http://www.supremenewyork.com/shop/all/sweatshirts";
- 		case "t-shirts":
- 			return "http://www.supremenewyork.com/shop/all/t-shirts";
- 		case "pants":
- 			return "http://www.supremenewyork.com/shop/all/pants";
- 		case "hats":
- 			return "http://www.supremenewyork.com/shop/all/hats";
- 		case "bags":
- 			return "http://www.supremenewyork.com/shop/all/bags";
- 		case "accessories":
- 			return "http://www.supremenewyork.com/shop/all/accessories";
- 		case "skate":
- 			return "http://www.supremenewyork.com/shop/all/skate";
- 		case "shoes":
- 			return "http://www.supremenewyork.com/shop/all/shoes";
- 		}		
- 		return "http://www.supremenewyork.com/shop/all/new";
- 	}
-	
-	// iterates through each item and calls addToCart on each
-	public void addToCart(WebDriver driver) 
-	{
-		// cart each item
-		for (Item item : this.order)
-		{
-			driver.findElement(By.cssSelector("body")).sendKeys(Keys.CONTROL +"T");
-			addItem(item, driver);
-			System.out.println("Added.");
-		}
-		
-		// go to checkout
-		driver.get("https://www.supremenewyork.com/checkout");
+		newTab();
 		System.out.println("NAVIGATING TO CHECKOUT.");
+		this.driver.get("https://www.supremenewyork.com/checkout");
 	}
 	
-	// check if the webstore has updated
-	public boolean checkUpdate() 
+	// opens new tab and switches to it
+	private void newTab()
 	{
-		return true;
-	}
-	
-	// sends a GET request to supreme and returns the stringified HTML body
-	public String sendGET(String getURL) throws IOException 
-	{
-		URL obj = new URL(getURL);
-		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-		con.setRequestMethod("GET");
-		con.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
-		int responseCode = con.getResponseCode();
-		System.out.println("GET Response Code :: " + responseCode);
-		if (responseCode == HttpURLConnection.HTTP_OK) 
-		{
-			BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-			String inputLine;
-			StringBuffer response = new StringBuffer();
-//			int lineNum = 0;
-			while ((inputLine = in.readLine()) != null ) 
-			{
-				response.append(inputLine);
-//				System.out.println(lineNum + ": " + inputLine);
-//				lineNum++;
-			}
-			in.close();
-			return response.toString();
-		}
-		else 
-		{
-			System.out.println("GET REQUEST FAILED.");
-			return null;
-		}
-	}
-	
-	public void refreshAndGrabLinks(WebDriver driver)
-	{
-//		if (this.order.isEmpty()) 
-//		{ 
-//			System.out.println("order empty");
-//			return; 
-//		}
-//		boolean updated = false;
-//		
-		driver.get("http://www.supremenewyork.com/shop/all/new");
-		System.out.println(driver.getTitle());
-		System.out.println("Here");
-		System.out.println(driver.getPageSource());
-		driver.get("http://www.supremenewyork.com/shop/all/new");
-		System.out.println(driver.getTitle());
-		System.out.println("Here");
-		System.out.println(driver.getPageSource());
-		driver.get("http://www.supremenewyork.com/shop/all/new");
-		System.out.println(driver.getTitle());
-		System.out.println("Here");
-		System.out.println(driver.getPageSource());
-//		if (!updated) 
-//		{
-//			int refreshCount = 0; // 
-//			while (updated == false && refreshCount < 200) 
-//			{
-//				try 
-//				{
-//					driver.findElement(By.linkText(this.order.get(0).getName()));
-//					updated = true;
-//					break;
-//				}
-//				catch (NoSuchElementException e)  
-//				{
-//					refreshCount++;
-//					try { Thread.sleep(this.sleep); } 
-//					catch (InterruptedException e1) { e1.printStackTrace(); }
-//					driver.navigate().refresh();
-//					System.out.println("Refreshed! "+refreshCount);
-//				}				
-//			}
-//		}
-		
-		// grab Urls
-		for (Item item : this.order)
-		{
-			if (item.getNumber() != -1)
-			{
-				try
-				{
-					System.out.println(driver.getPageSource());
-					WebElement itemElem = driver.findElement(By.xpath("//*[@id=\"container\"]/article["+item.getNumber()+"]/div/h1/a"));
-					String itemUrl = itemElem.getAttribute("href");
-					System.out.println("Got Url: " + itemUrl);
-					item.setUrl(itemUrl);
-//					this.links.add(itemURL);
-				}
-				catch (NoSuchElementException e) { e.printStackTrace(); }
-			}
-			else  
-			{ 
-				try
-				{
-					WebElement itemElem = driver.findElement(By.linkText(item.getName()));
-					String itemUrl = itemElem.getAttribute("href");
-					System.out.println("Got Url: " + itemUrl);
-					item.setUrl(itemUrl);
-//					this.links.add(itemURL);
-				}
-				catch (NoSuchElementException e) { e.printStackTrace(); }
-			}	
-		}
+		((JavascriptExecutor) this.driver).executeScript("window.open('','_blank');");
+		ArrayList<String> tabs = new ArrayList<String> (this.driver.getWindowHandles());
+		this.driver.switchTo().window(tabs.get(tabs.size()-1));
 	}
 }
 
