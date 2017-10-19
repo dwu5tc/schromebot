@@ -13,6 +13,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.NoSuchElementException;
@@ -34,7 +38,9 @@ public class ChromeSBot
 	
 	private List<Item> order = new ArrayList<Item>();
 //	private List<String> links = new ArrayList<String>();
-	private int sleep = -1;
+	private WebDriver driver;
+	private String staleURL;
+	private int sleep = 300;
 	
 	public static void main(String[] args) 
 	{
@@ -85,6 +91,28 @@ public class ChromeSBot
 		}
 		options.addArguments("disable-infobars");
 		WebDriver driver = new ChromeDriver(options);
+		
+		
+		try 
+		{
+			Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/new").get();
+			Elements links = doc.select("div.turbolink_scroller a");
+		
+	        print("\nLinks: (%d)", links.size()); 
+	        for (Element link : links) {
+	            print(" * a: <%s>  (%s)", link.attr("abs:href"), link.text(), 35);
+	        }
+		}
+		catch (Exception e)
+		{
+			System.out.println("wtf");
+		}
+
+        
+		
+		
+		
+		
 //		driver.get("http://www.stackoverflow.com");
 		String body;
 		try 
@@ -117,16 +145,27 @@ public class ChromeSBot
 		reader.close();
 	}
 	
-	public ChromeSBot() {}
-	
 	public ChromeSBot(int sleep) 
 	{
 		this.sleep = sleep;
+		System.setProperty("webdriver.chrome.driver", "C:\\SeleniumDrivers\\10052017\\chromedriver.exe");
+		ChromeOptions options = new ChromeOptions();
+		options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\AutomationProfile");
+		options.addArguments("disable-infobars");
+		this.driver = new ChromeDriver(options);
 	}
+	
+	private static void print(String msg, Object... args) {
+        System.out.println(String.format(msg, args));
+    }
 	
 	public void buildOrderJar(String path) throws IOException 
 	{
 		return;
+	}
+	
+	public static void grabLinkz() throws IOException {
+
 	}
 	
 	/*private static List<String> parseForLinks(String body) 
