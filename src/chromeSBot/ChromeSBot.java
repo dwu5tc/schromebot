@@ -24,16 +24,18 @@ import org.openqa.selenium.JavascriptExecutor;
 
 public class ChromeSBot 
 {
-	// grab links with http request (faster)
-		// first time if refreshing on new, must check for change in elements
-		// new doesn't have the item titles
-	// implement a better way for people to set up the bot and their orders
-	// implement a way to check that people don't share this bot
-	// 
+	// site with firebase db to allow users to create orders 
+	// sBot will build orders using a GET request to the site
+	// give out keys to people
+	// 1 order per key
+	// order: item num, size + path to chrome profile
+	// way to make sure people arent using the same key to order 
+	// resale calculator on the site
+	// implement better exception handling
 	// https://stackoverflow.com/questions/33225947/can-a-website-detect-when-you-are-using-selenium-with-chromedriver
 	
+	private String version = "1.0.0";
 	private List<Item> order = new ArrayList<Item>();
-//	private List<String> links = new ArrayList<String>();
 	private WebDriver driver;
 	private String staleLink;
 	private Elements freshLinks;
@@ -46,22 +48,22 @@ public class ChromeSBot
 		System.out.println("ENTER TIME BETWEEN PAGE RESFRESHES (IN MS). 300-1000 RECOMMENDED.");
 		int sleep = reader.nextInt();
 		System.out.println("WILL REFRESH EVERY " + sleep + "MS.");
-		ChromeSBot sBot = new ChromeSBot(sleep, false);
-			
+		ChromeSBot sBot = new ChromeSBot(sleep, true); // false = dsmprofile, true = automationprofile
+				
 		sBot.grabStaleLink();
 		
-		System.out.println("ENTER 0 IF RUNNING THE JAR. ENTER ANYTHING ELSE OTHERWISE.");
+		System.out.println("ENTER 0 IF BUILDING ORDER FROM SITE. ENTER ANYTHING ELSE OTHERWISE.");
 		int i = reader.nextInt();	
 		if (i == 0) 
 		{	
 			// properly implement this...
-//			System.out.println("(JAR) BUILDING ORDER...");
+//			System.out.println("(SITE) BUILDING ORDER...");
 //			String orderPath = "./order.txt";
 //			try { sBot.buildOrderJar(orderPath); } 
 //			catch (IOException e) { e.printStackTrace(); }
 		}
 		else {
-			System.out.println("(NOT JAR) BUILDING ORDER...");
+			System.out.println("(TXT) BUILDING ORDER...");
 			String orderPath = "./src/chromeSBot/orderTest.txt";
 			try { sBot.buildOrder(orderPath); } 
 			catch (IOException e) { e.printStackTrace(); }
@@ -70,20 +72,27 @@ public class ChromeSBot
 		System.out.println("ORDER BUILT.");
 		sBot.confirmOrder();
 		
-		System.out.println("ENTER ANYTHING TO BEGIN REFRESHING.");
-		i = reader.nextInt();
+		System.out.println("ENTER A NUMBER TO BEGIN REFRESHING.");
+		reader.nextInt();
 		
 		sBot.refreshPage();
+		System.out.println("SITE HAS BEEN UPDATED. CARTING ITEMS NOW...");
+		
+		long startTime = System.nanoTime();
+		
 		sBot.addToCart();
 		sBot.checkout();
-   
-//		driver.get("http://www.stackoverflow.com");
-
-	
+		
+		long endTime = System.nanoTime();
+		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
+		
+		System.out.println("ATC: " + elapsedTime + " seconds.");
+   	
 		reader.close();
 	}
 	
 	// constructor
+	// set refresh rate and chrome profile
 	public ChromeSBot(int sleep, boolean isReal) 
 	{
 		this.sleep = sleep;
@@ -101,6 +110,8 @@ public class ChromeSBot
 		this.driver = new ChromeDriver(options);
 	}
 	
+	// grab stale link and set the stale link prop
+	// this link should be swapped out on shop update  
 	// sets this.staleLink to the first product link of the /new page
 	private void grabStaleLink() 
 	{
@@ -119,6 +130,8 @@ public class ChromeSBot
 	
 	// continually checks the /new page for updated links
 	// updates this.freshLinks when the first first product link DOESN'T match this.staleLink
+	
+	// continually grab the links within the "turolink_scroller div" and check that stale link has been swapped out
 	private void refreshPage()
 	{
 		boolean notUpdated = true;
@@ -129,7 +142,7 @@ public class ChromeSBot
 			{
 				Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/new").get();
 				Elements links = doc.select("div.turbolink_scroller a");
-				if (!links.eq(0).attr("abs:href").equals(this.staleLink)) // not equal
+				if (links.eq(0).attr("abs:href").equals(this.staleLink)) // not equal
 				{
 					notUpdated = false;
 					this.freshLinks = links;
@@ -159,11 +172,12 @@ public class ChromeSBot
 	
 	// sets the order property
 	// reads a file from specified (hardcoded) path
+	
+	// build order from .txt file specified at the path
 	public void buildOrder(String path) throws IOException
 	{
-		FileInputStream fis = new FileInputStream(path);
-		// construct bufferedreader from inputstreamreader
-		BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+		FileInputStream fis = new FileInputStream(path);	
+		BufferedReader br = new BufferedReader(new InputStreamReader(fis)); // construct bufferedreader from inputstreamreader
 	 
 		String line = null;
 		int itemCount = 1;
@@ -171,7 +185,6 @@ public class ChromeSBot
 		while ((line = br.readLine()) != null)
 		{
 			line = line.trim();
-//			System.out.println("\n\nITEM NUMBER: " + itemCount + "\n");
 			Item temp = new Item();
 			while (!line.equals("-"))
 			{
@@ -183,7 +196,7 @@ public class ChromeSBot
 				}
 				else 
 				{ 
-					System.out.println("No value for field: " + parts[0]); 
+					System.out.println("***No value for " + parts[0] + " field***"); 
 				}
 				if ((line = br.readLine()) != null) 
 				{ 
@@ -194,25 +207,27 @@ public class ChromeSBot
 			}
 			if (temp.isValid()) 
 			{ 
-				System.out.println("Item " + itemCount + " is valid.");
+				System.out.println("Item " + itemCount + " is valid. Appended to order.");
 				this.order.add(temp); 
 				itemCount++;  
 			}
 			else 
 			{ 
-				System.out.println("Item " + itemCount + " is NOT valid."); 
+				System.out.println("Item " + itemCount + " is NOT valid. Ignored."); 
 				itemCount++;
 			}
 		}
 		br.close();
 	}
 	
-	// buildOrder but for the JAR 
-	public void buildOrderJar(String path) throws IOException 
+	
+	// buildOrder but from site
+	public void buildOrderWeb(String path) throws IOException 
 	{
 		return;
 	}
 	
+	// set the number and colour fields of each item to be added to the order prop
 	// used by buildOrder
 	// sets the order field
 	// parts[0] should be the key and parts[1] should be the value
@@ -220,26 +235,33 @@ public class ChromeSBot
 	{
 		switch (parts[0]) 
 		{
-			case "name": 
-				item.setName(parts[1]);
-				break;
+//			case "name": 
+//				item.setName(parts[1]);
+//				break;
 			case "number": 
-				// regex match for digits
-				if (parts[1].matches("\\d+")) { item.setNumber(Integer.parseInt(parts[1])); }
-				else { System.out.println("Number field is not a number."); }
+				if (parts[1].matches("\\d+")) // regex match for digits
+				{ 
+					item.setNumber(Integer.parseInt(parts[1])); 
+				} 
+				else 
+				{ 
+					System.out.println("Number field is not a number."); 
+				}
 				break;
-//				case "type": 
-//					item.setType(parts[1]);
-//					break;
-			case "colour": 
-				item.setColour(parts[1]);
-				break;
+//			case "type": 
+//				item.setType(parts[1]);
+//				break;
+//			case "colour": 
+//				item.setColour(parts[1]);
+//				break;
 			case "size": 
 				item.setSize(parts[1]);
 				break;
 		}
-		System.out.println("set field: " + parts[0] + " = " + parts[1]);
+		System.out.println("Set " + parts[0] + " field --> " + parts[1]);
 	}
+	
+	// prints out each order item for user to confirm
 	
 	// prints the order nicely for user to see
 	public void confirmOrder()
@@ -249,10 +271,11 @@ public class ChromeSBot
 		{
 			System.out.println("----- Item " + itemCount + " -----");
 			item.printItem();
-			System.out.print("\n");
 			itemCount++;
 		}
 	}
+	
+	// cart the order
 	
 	// iterates through each item and calls addToCart on each
 	public void addToCart() 
@@ -265,64 +288,91 @@ public class ChromeSBot
 		}
 	}
 
-	//used by addToCart
-	// navigates to URL, checks size, adds to cart
+	
+	// navigate to URL, select size, add to cart (used by addToCart)
 	private void addItem(Item item)
 	{
 		String targetLink = this.freshLinks.eq(item.getNumber()).attr("abs:href");
 		if (targetLink != null ) 
 		{
-			((JavascriptExecutor) this.driver).executeScript("window.open('','_blank');");
-			ArrayList<String> tabs = new ArrayList<String> (this.driver.getWindowHandles());
-			this.driver.switchTo().window(tabs.get(tabs.size()-1));
+			this.newTab();
 			System.out.println("NAVIGATING TO: " + item.getUrl());
 			this.driver.get(targetLink);
 			
-			// size select
 			if (item.getSize() != null) 
 			{
-				Select sizeSelect = new Select(this.driver.findElement(By.id("size")));
-				System.out.println(this.driver.getTitle() + " // Size --> " + item.getSize());
-				sizeSelect.selectByVisibleText(item.getSize());
+				this.selectSize(item.getSize());
 			}
-
-			// colour select
-			if (item.getColour() != null) 
-			{
-				WebElement colorSelect = this.driver.findElement(By.xpath("//a[@data-style-name='" + item.getColour()+"']"));
-				System.out.println(this.driver.getTitle()+" // Colour --> " + item.getColour());
-				//colorSelect.click();
-				colorSelect.sendKeys(Keys.ENTER);
-			}
-			
-			// add item to cart
-			try 
-			{
-				WebElement addToCart = this.driver.findElement(By.xpath("//input[@value='add to cart']"));
-				addToCart.sendKeys(Keys.ENTER);
-				addToCart.sendKeys(Keys.ENTER);
-				System.out.println(this.driver.getTitle() + " // Successfully Carted!");
-			}
-			catch (NoSuchElementException e)
-			{
-				System.out.println(this.driver.getTitle() + " // Sold Out***");
-			}
+			this.clickAddToCart();
 		}
 	}
 	
-	private void checkout() 
-	{
-		newTab();
-		System.out.println("NAVIGATING TO CHECKOUT.");
-		this.driver.get("https://www.supremenewyork.com/checkout");
-	}
-	
-	// opens new tab and switches to it
+	// open and switch to new tab
 	private void newTab()
 	{
 		((JavascriptExecutor) this.driver).executeScript("window.open('','_blank');");
 		ArrayList<String> tabs = new ArrayList<String> (this.driver.getWindowHandles());
 		this.driver.switchTo().window(tabs.get(tabs.size()-1));
+	}
+	
+	// select item size 
+	private void selectSize(String size) 
+	{
+		try
+		{
+			Select sizeSelect = new Select(this.driver.findElement(By.id("s")));
+			System.out.println(this.driver.getTitle() + " // Size --> " + size);
+			sizeSelect.selectByVisibleText(size);
+		}
+		catch (Exception e)
+		{
+			System.out.println(this.driver.getTitle() + " // COULD NOT SELECT SIZE BY ID***");
+			System.out.println("ATTEMPTING TO SELECT SIZE BY TAGNAME.");
+			try 
+			{
+				Select sizeSelect = new Select(this.driver.findElement(By.tagName("select")));
+				System.out.println(this.driver.getTitle() + " // Size --> " + size);
+				sizeSelect.selectByVisibleText(size);
+			}
+			catch (Exception e2)
+			{
+				System.out.println(this.driver.getTitle() + " // COULD NOT SELECT SIZE BY TAGNAME GG***");
+			}
+		}
+	}
+	
+	// click add to cart button
+	private void clickAddToCart()
+	{
+		try 
+		{
+			WebElement addToCart = this.driver.findElement(By.xpath("//input[@value='add to cart']"));
+			addToCart.sendKeys(Keys.ENTER);
+			System.out.println(this.driver.getTitle() + " // Successfully Carted!");
+		}
+		catch (Exception e)
+		{
+			System.out.println(this.driver.getTitle() + " // COULD NOT CART ITEM***");
+			System.out.println("ATTEMPTING TO CART ITEM AGAIN");
+			try 
+			{
+				WebElement addToCart = this.driver.findElement(By.name("commit"));
+				addToCart.sendKeys(Keys.ENTER);
+				System.out.println(this.driver.getTitle() + " // Successfully Carted!");
+			}
+			catch (Exception e2)
+			{
+				System.out.println(this.driver.getTitle() + " // COULD NOT CART ITEM AGAIN GG***");
+			}
+		}
+	}
+	
+	// navigate to checkout page
+	private void checkout() 
+	{
+		this.newTab();
+		System.out.println("NAVIGATING TO CHECKOUT.");
+		this.driver.get("https://www.supremenewyork.com/checkout");
 	}
 }
 
