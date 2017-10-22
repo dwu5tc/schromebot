@@ -1,7 +1,0 @@
-﻿-
-number: 4
-size: XLarge
--
-number: 82
-size: XLarge
--

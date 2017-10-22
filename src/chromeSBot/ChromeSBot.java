@@ -1,7 +1,7 @@
 package chromeSBot;
 
 import java.io.BufferedReader;
-import java.io.File;
+//import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -14,7 +14,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
-import org.openqa.selenium.NoSuchElementException;
+//import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -64,7 +64,7 @@ public class ChromeSBot
 		}
 		else {
 			System.out.println("(TXT) BUILDING ORDER...");
-			String orderPath = "./src/chromeSBot/orderTest.txt";
+			String orderPath = "./src/chromeSBot/order.txt";
 			try { sBot.buildOrder(orderPath); } 
 			catch (IOException e) { e.printStackTrace(); }
 		}
@@ -235,9 +235,6 @@ public class ChromeSBot
 	{
 		switch (parts[0]) 
 		{
-//			case "name": 
-//				item.setName(parts[1]);
-//				break;
 			case "number": 
 				if (parts[1].matches("\\d+")) // regex match for digits
 				{ 
@@ -248,12 +245,6 @@ public class ChromeSBot
 					System.out.println("Number field is not a number."); 
 				}
 				break;
-//			case "type": 
-//				item.setType(parts[1]);
-//				break;
-//			case "colour": 
-//				item.setColour(parts[1]);
-//				break;
 			case "size": 
 				item.setSize(parts[1]);
 				break;
@@ -280,7 +271,6 @@ public class ChromeSBot
 	// iterates through each item and calls addToCart on each
 	public void addToCart() 
 	{
-		// cart each item
 		for (Item item : this.order)
 		{
 			addItem(item);
@@ -296,6 +286,7 @@ public class ChromeSBot
 		if (targetLink != null ) 
 		{
 			this.newTab();
+			// FIX THIS URL BS
 			System.out.println("NAVIGATING TO: " + item.getUrl());
 			this.driver.get(targetLink);
 			
