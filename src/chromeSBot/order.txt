@@ -1,12 +1,4 @@
 ﻿-
-name: Supreme®/Stone Island® S/S Top
-type: tops_sweaters
-colour: Olive
+number: 1
 size: Medium
-
--
-
-name: Supreme®/Stone Island® Hooded Sweatshirt
-colour: Olive
-size: Medium 
 -

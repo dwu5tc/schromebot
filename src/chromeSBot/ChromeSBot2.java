@@ -48,7 +48,7 @@ public class ChromeSBot
 		System.out.println("ENTER TIME BETWEEN PAGE RESFRESHES (IN MS). 300-1000 RECOMMENDED.");
 		int sleep = reader.nextInt();
 		System.out.println("WILL REFRESH EVERY " + sleep + "MS.");
-		ChromeSBot sBot = new ChromeSBot(sleep, false); // false = dsmprofile, true = automationprofile or user profile
+		ChromeSBot sBot = new ChromeSBot(sleep, args[0]); // false = dsmprofile, true = automationprofile or user profile
 				
 		sBot.grabStaleLink();
 		
@@ -71,7 +71,7 @@ public class ChromeSBot
 //		}
 		
 		System.out.println("(TXT) BUILDING ORDER...");
-		String orderPath = "order.txt";
+		String orderPath = args[1];
 		try { sBot.buildOrder(orderPath); } 
 		catch (IOException e) { e.printStackTrace(); }
 		
@@ -99,12 +99,13 @@ public class ChromeSBot
 	
 	// constructor
 	// set refresh rate and chrome profile
-	public ChromeSBot(int sleep, boolean isReal) 
+	public ChromeSBot(int sleep, String profile) 
 	{
 		this.sleep = sleep;
 		System.setProperty("webdriver.chrome.driver", "chromedriver.exe");
 		ChromeOptions options = new ChromeOptions();
-		options.addArguments("user-data-dir=Default");
+		options.addArguments("user-data-dir=" + profile + "");
+		System.out.println(profile);
 //		if (isReal) 
 //		{ 
 //			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\AutomationProfile");
