@@ -48,30 +48,12 @@ public class ChromeSBot
 		System.out.println("ENTER TIME BETWEEN PAGE RESFRESHES (IN MS). 300-1000 RECOMMENDED.");
 		int sleep = reader.nextInt();
 		System.out.println("WILL REFRESH EVERY " + sleep + "MS.");
-		ChromeSBot sBot = new ChromeSBot(sleep, false); // false = dsmprofile, true = automationprofile or user profile
+		ChromeSBot sBot = new ChromeSBot(sleep, args[0]); // false = dsmprofile, true = automationprofile or user profile
 				
 		sBot.grabStaleLink();
 		
-//		System.out.println("ENTER 0 IF BUILDING ORDER FROM SITE. ENTER ANYTHING ELSE OTHERWISE.");
-//		int i = reader.nextInt();	
-//		if (i == 0) 
-//		{	
-//			// properly implement this...
-////			System.out.println("(SITE) BUILDING ORDER...");
-////			String orderPath = "./order.txt";
-////			try { sBot.buildOrderJar(orderPath); } 
-////			catch (IOException e) { e.printStackTrace(); }
-//		}
-//		else {
-//			System.out.println("(TXT) BUILDING ORDER...");
-//			String orderPath = "./src/chromeSBot/order.txt";
-////			String orderPath = "./order.txt";
-//			try { sBot.buildOrder(orderPath); } 
-//			catch (IOException e) { e.printStackTrace(); }
-//		}
-		
 		System.out.println("(TXT) BUILDING ORDER...");
-		String orderPath = "order.txt";
+		String orderPath = args[1];
 		try { sBot.buildOrder(orderPath); } 
 		catch (IOException e) { e.printStackTrace(); }
 		
@@ -99,22 +81,12 @@ public class ChromeSBot
 	
 	// constructor
 	// set refresh rate and chrome profile
-	public ChromeSBot(int sleep, boolean isReal) 
+	public ChromeSBot(int sleep, String profile) 
 	{
 		this.sleep = sleep;
 		System.setProperty("webdriver.chrome.driver", "chromedriver.exe");
 		ChromeOptions options = new ChromeOptions();
-		options.addArguments("user-data-dir=Default");
-//		if (isReal) 
-//		{ 
-//			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\AutomationProfile");
-////			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\User Data"); 
-//		}
-//		else 
-//		{ 
-//			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\DSMProfile");
-////			options.addArguments("user-data-dir=C:\\Users\\DeanW\\AppData\\Local\\Google\\Chrome\\User Data"); 
-//		}
+		options.addArguments("user-data-dir=" + profile);
 		options.addArguments("disable-infobars");
 		this.driver = new ChromeDriver(options);
 	}
@@ -151,7 +123,7 @@ public class ChromeSBot
 			{
 				Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/new").get();
 				Elements links = doc.select("div.turbolink_scroller a");
-				if (links.eq(0).attr("abs:href").equals(this.staleLink)) // not equal (! for real)
+				if (!links.eq(0).attr("abs:href").equals(this.staleLink)) // not equal (! for real)
 				{
 					notUpdated = false;
 					this.freshLinks = links;
