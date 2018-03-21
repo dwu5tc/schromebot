@@ -48,21 +48,32 @@ public class ChromeSBot
 		System.out.println("ENTER TIME BETWEEN PAGE RESFRESHES (IN MS). 300-1000 RECOMMENDED.");
 		int sleep = reader.nextInt();
 		System.out.println("WILL REFRESH EVERY " + sleep + "MS.");
-		ChromeSBot sBot = new ChromeSBot(sleep, args[0]);
-
+		
+		ChromeSBot sBot = null;
+		String orderPath = null;
+		if (args.length == 2) {
+			sBot = new ChromeSBot(sleep, args[0]);
+			orderPath = args[1];
+		} else {
+			sBot = new ChromeSBot(sleep, "profile");
+			orderPath = "order.txt";
+		}
+//		sBot.grabStaleLink();
+		
 		System.out.println("(TXT) BUILDING ORDER...");
-		String orderPath = args[1];
 		try { sBot.buildOrder(orderPath); }
 		catch (IOException e) { e.printStackTrace(); }
 
 		System.out.println("ORDER BUILT.");
 		sBot.confirmOrder();
 
-		System.out.println("ENTER A NUMBER TO BEGIN REFRESHING.");
+//		System.out.println("ENTER A NUMBER TO BEGIN REFRESHING.");
+		System.out.println("ENTER A NUMBER TO GRAB LINKS AND BEGIN CARTING.");
 		reader.nextInt();
 
-		sBot.FirstDrop();
-		System.out.println("SITE HAS BEEN UPDATED. CARTING ITEMS NOW...");
+//		sBot.refreshPage();
+		sBot.NotFirstDrop();
+//		System.out.println("SITE HAS BEEN UPDATED. CARTING ITEMS NOW...");
 
 		long startTime = System.nanoTime();
 
@@ -126,7 +137,7 @@ public class ChromeSBot
 		{
 			try
 			{
-				Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/all").get();
+				Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/new").get();
 				Elements links = doc.select("div.turbolink_scroller a");
 				if (!links.eq(0).attr("abs:href").equals(this.staleLink)) // not equal (! for real)
 				{
@@ -158,13 +169,34 @@ public class ChromeSBot
 
 	private void FirstDrop()
 	{
-		Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/all").get();
-		Elements links = doc.select("div.turbolink_scroller a");
-		this.freshLinks = links;
+		try 
+		{
+			Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/all").get();
+			Elements links = doc.select("div.turbolink_scroller a");
+			this.freshLinks = links;
+		}
+		catch (Exception e)
+		{
+			System.out.println("Error in firstDrop.");
+		}
+	}
+	
+	private void NotFirstDrop()
+	{
+		try 
+		{
+			Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/new").get();
+			Elements links = doc.select("div.turbolink_scroller a");
+			this.freshLinks = links;
+		}
+		catch (Exception e)
+		{
+			System.out.println("Error in notFirstDrop.");
+		}
 	}
 
 	// sets the order property
-	// reads a file from specified (hardcoded) path
+	// reads a file from specified path
 
 	// build order from .txt file specified at the path
 	public void buildOrder(String path) throws IOException
@@ -267,7 +299,7 @@ public class ChromeSBot
 		for (Item item : this.order)
 		{
 			addItem(item);
-			System.out.println("Added.");
+			System.out.println("Added. (Maybe)");
 		}
 	}
 
