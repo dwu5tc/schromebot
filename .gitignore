@@ -1,9 +1,4 @@
-.classpath
-.settings
-.project
-.gitignore~
-..gitignore.un~
-/lib
-/selenium
-/bin
-debug.log
+*
+!src/
+!src/chromeSBot/
+!src/chromeSBot/*
