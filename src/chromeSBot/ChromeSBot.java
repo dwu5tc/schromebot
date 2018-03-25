@@ -22,24 +22,22 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.JavascriptExecutor;
 
-public class ChromeSBot
+public class ChromeSBot implements Runnable
 {
-	// site with firebase db to allow users to create orders
-	// sBot will build orders using a GET request to the site
-	// give out keys to people
-	// 1 order per key
-	// order: item num, size + path to chrome profile
-	// way to make sure people arent using the same key to order
-	// resale calculator on the site
+	// multithread
+	// static vs nonstatic methods
+	// better method names
 	// implement better exception handling
 	// https://stackoverflow.com/questions/33225947/can-a-website-detect-when-you-are-using-selenium-with-chromedriver
 
-	private String version = "1.0.0";
+//	private String version = "1.0.0";
 	private List<Item> order = new ArrayList<Item>();
 	private WebDriver driver;
 	private String staleLink;
 	private Elements freshLinks;
-	private int sleep = 500;
+	private int refreshDelay;
+	private int addItemDelay;
+	private int checkoutDelay;
 
 	public static void main(String[] args)
 	{
@@ -58,21 +56,21 @@ public class ChromeSBot
 			sBot = new ChromeSBot(sleep, "profile");
 			orderPath = "order.txt";
 		}
-//		sBot.grabStaleLink();
+		sBot.grabStaleLinkFromSlashAll();
 		
 		System.out.println("(TXT) BUILDING ORDER...");
-		try { sBot.buildOrder(orderPath); }
+		try { sBot.buildOrderFromFile(orderPath); }
 		catch (IOException e) { e.printStackTrace(); }
 
 		System.out.println("ORDER BUILT.");
 		sBot.confirmOrder();
 
-//		System.out.println("ENTER A NUMBER TO BEGIN REFRESHING.");
-		System.out.println("ENTER A NUMBER TO GRAB LINKS AND BEGIN CARTING.");
+		System.out.println("ENTER A NUMBER TO BEGIN REFRESHING.");
+//		System.out.println("ENTER A NUMBER TO GRAB LINKS AND BEGIN CARTING.");
 		reader.nextInt();
 
-//		sBot.refreshPage();
-		sBot.NotFirstDrop();
+		sBot.refreshPage("");
+//		sBot.grabLinks("new");
 //		System.out.println("SITE HAS BEEN UPDATED. CARTING ITEMS NOW...");
 
 		long startTime = System.nanoTime();
@@ -92,8 +90,8 @@ public class ChromeSBot
 	// set refresh rate and chrome profile
 	public ChromeSBot(int sleep, String profile)
 	{
-		this.sleep = sleep;
-		System.setProperty("webdriver.chrome.driver", "chromedriver.exe");
+		this.refreshDelay = sleep;
+		System.setProperty("webdriver.chrome.driver", "chromedriver"); // chromedriver.exe for windows
 		ChromeOptions options = new ChromeOptions();
 		options.addArguments("user-data-dir=" + profile);
 		options.addArguments("disable-infobars");
@@ -103,11 +101,12 @@ public class ChromeSBot
 	// grab stale link and set the stale link prop
 	// this link should be swapped out on shop update
 	// sets this.staleLink to the first product link of the /new page
-	private void grabStaleLink()
+	private void grabStaleLinkFromSlashAll()
 	{
 		try
 		{
-			Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/all").get();
+			String target = "http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/sh" + "op/" + "all";
+			Document doc = Jsoup.connect(target).get();
 			Elements links = doc.select("div.turbolink_scroller a");
 			this.staleLink = links.eq(0).attr("abs:href");
 			System.out.println("STALE LINK SET: " + this.staleLink);
@@ -118,18 +117,11 @@ public class ChromeSBot
 		}
 	}
 
-	// 350 for red
-	// 349 for deck
-	// 327 for zippo
-	// 319 for black shoulder
-	// 196 for black ftw
-	// 195 for white
-
 	// continually checks the /new page for updated links
 	// updates this.freshLinks when the first first product link DOESN'T match this.staleLink
 
 	// continually grab the links within the "turolink_scroller div" and check that stale link has been swapped out
-	private void refreshPage()
+	private void refreshPage(String path)
 	{
 		boolean notUpdated = true;
 		int attemptNum = 1;
@@ -137,7 +129,8 @@ public class ChromeSBot
 		{
 			try
 			{
-				Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/new").get();
+				String target = "http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/sh" + "op/" + path;
+				Document doc = Jsoup.connect(target).get();
 				Elements links = doc.select("div.turbolink_scroller a");
 				if (!links.eq(0).attr("abs:href").equals(this.staleLink)) // not equal (! for real)
 				{
@@ -151,7 +144,7 @@ public class ChromeSBot
 					try
 					{
 						System.out.println("REFRESHING " + attemptNum + ". SHOP NOT UPDATED");
-						Thread.sleep(this.sleep);
+						Thread.sleep(this.refreshDelay);
 						attemptNum++;
 					}
 					catch (Exception e)
@@ -167,25 +160,12 @@ public class ChromeSBot
 		}
 	}
 
-	private void FirstDrop()
+	private void grabLinks(String path)
 	{
 		try 
 		{
-			Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/all").get();
-			Elements links = doc.select("div.turbolink_scroller a");
-			this.freshLinks = links;
-		}
-		catch (Exception e)
-		{
-			System.out.println("Error in firstDrop.");
-		}
-	}
-	
-	private void NotFirstDrop()
-	{
-		try 
-		{
-			Document doc = Jsoup.connect("http://www.supremenewyork.com/shop/new").get();
+			String target = "http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/sh" + "op/" + path;
+			Document doc = Jsoup.connect(target).get();
 			Elements links = doc.select("div.turbolink_scroller a");
 			this.freshLinks = links;
 		}
@@ -195,11 +175,8 @@ public class ChromeSBot
 		}
 	}
 
-	// sets the order property
-	// reads a file from specified path
-
-	// build order from .txt file specified at the path
-	public void buildOrder(String path) throws IOException
+	// read .txt file from specified path and build order
+	public void buildOrderFromFile(String path) throws IOException
 	{
 		FileInputStream fis = new FileInputStream(path);
 		BufferedReader br = new BufferedReader(new InputStreamReader(fis)); // construct bufferedreader from inputstreamreader
@@ -210,14 +187,15 @@ public class ChromeSBot
 		while ((line = br.readLine()) != null)
 		{
 			line = line.trim();
-			Item temp = new Item();
+			Item tempItem = new Item();
 			while (!line.equals("-"))
 			{
 				String[] parts = line.split(":");
 				if (parts.length > 1)
 				{
+					parts[0] = parts[0].trim();
 					parts[1] = parts[1].trim();
-					setField(temp, parts);
+					setField(tempItem, parts);
 				}
 				else
 				{
@@ -225,15 +203,15 @@ public class ChromeSBot
 				}
 				if ((line = br.readLine()) != null)
 				{
-					line.trim();
+					line.trim(); // what is this for...
 					continue;
 				}
 				else { break outer;	}
 			}
-			if (temp.isValid())
+			if (tempItem.isValid())
 			{
 				System.out.println("Item " + itemCount + " is valid. Appended to order.");
-				this.order.add(temp);
+				this.order.add(tempItem);
 				itemCount++;
 			}
 			else
@@ -252,9 +230,8 @@ public class ChromeSBot
 		return;
 	}
 
-	// set the number and colour fields of each item to be added to the order prop
+	// set the number and size fields of each item to be added to the order
 	// used by buildOrder
-	// sets the order field
 	// parts[0] should be the key and parts[1] should be the value
 	private static void setField(Item item, String[] parts)
 	{
@@ -278,8 +255,6 @@ public class ChromeSBot
 	}
 
 	// prints out each order item for user to confirm
-
-	// prints the order nicely for user to see
 	public void confirmOrder()
 	{
 		int itemCount = 1;
@@ -291,18 +266,16 @@ public class ChromeSBot
 		}
 	}
 
-	// cart the order
-
 	// iterates through each item and calls addToCart on each
 	public void addToCart()
 	{
 		for (Item item : this.order)
 		{
 			addItem(item);
-			System.out.println("Added. (Maybe)");
+			try { Thread.sleep(this.addItemDelay); }
+			catch (Exception e) { e.printStackTrace(); }
 		}
 	}
-
 
 	// navigate to URL, select size, add to cart (used by addToCart)
 	private void addItem(Item item)
@@ -311,8 +284,7 @@ public class ChromeSBot
 		if (targetLink != null )
 		{
 			this.newTab();
-			// FIX THIS URL BS
-			System.out.println("NAVIGATING TO: " + item.getUrl());
+			System.out.println("NAVIGATING TO: " + targetLink);
 			this.driver.get(targetLink);
 
 			if (item.getSize() != null)
@@ -386,11 +358,17 @@ public class ChromeSBot
 	// navigate to checkout page
 	private void checkout()
 	{
-		this.newTab();
-		System.out.println("NAVIGATING TO CHECKOUT.");
-		this.driver.get("https://www.supremenewyork.com/checkout");
+		try 
+		{ 
+			Thread.sleep(this.checkoutDelay); 
+			this.newTab();
+			System.out.println("NAVIGATING TO CHECKOUT...");
+			this.driver.get("http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/chec" + "kout");
+		}
+		catch (Exception e) { e.printStackTrace(); } 
+	}
+	
+	public void run() {
+		
 	}
 }
-
-
-
