@@ -1,4 +1,0 @@
-﻿-
-number: 1
-size: Medium
--
