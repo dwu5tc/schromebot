@@ -33,8 +33,6 @@ public class ChromeSBot {
 	public static void main(String[] args) {
 		Scanner reader = new Scanner(System.in);
 		
-
-		
 		System.out.println("ENTER TIME BETWEEN PAGE RESFRESHES (IN MS). 300-1000 RECOMMENDED.");
 		int delay = 500;
 		delay = reader.nextInt();
@@ -45,12 +43,9 @@ public class ChromeSBot {
 		
 		System.out.println("WILL REFRESH EVERY " + delay + "MS.");
 		
-		if (args.length < 1 || args[0] == "test")
-		{
+		if (args.length < 1 || args[0] == "test") {
 			chromeSBot.grabLinks();
-		}
-		else 
-		{
+		} else {
 			chromeSBot.refreshAndGrabLinks();
 		}
 //		System.out.println("ENTER A INTEGER TO BEGIN CARTING.");
@@ -118,119 +113,94 @@ public class ChromeSBot {
 		this.refreshDelay = delay;
 	}
 	
+	private void configureSbots(String configPath) {
+		
+	}
+	
 	// grab stale link (first product link of the target page) and set the stale link prop
 	// might be faster just to check the element and not the href???
-	private void grabStaleLink()
-	{
-		try
-		{
+	private void grabStaleLink() {
+		try {
 			String target = "http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/sh" + "op/" + this.shopPath;
 			Elements links = null;
 			Document doc = Jsoup.connect(target).get();
 			
-			if (this.shopPath == "new" || this.shopPath == "all")
-			{
+			if (this.shopPath == "new" || this.shopPath == "all") {
 				links = doc.select("div.turbolink_scroller a");
-			}
-			else 
-			{
+			} else {
 				links = doc.select("div.shop a");
 			}
 	
 			this.staleLink = links.eq(0).attr("abs:href");
 			System.out.println("STALE LINK SET: " + this.staleLink);
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			System.out.println("Error in grabStaleLink.");
 		}
 	}
 
 	// continually grab the links and check that stale link has been swapped out
 	// updates this.freshLinks upon mismatch
-	private void refreshAndGrabLinks()
-	{
+	private void refreshAndGrabLinks() {
 		String target = "http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/sh" + "op/" + this.shopPath;
 		String linksContainer;
-		if (this.shopPath == "new" || this.shopPath == "all")
-		{
+		if (this.shopPath == "new" || this.shopPath == "all") {
 			linksContainer = "div.turbolink_scroller a";
-		}
-		else 
-		{
+		} else {
 			linksContainer = "div.shop a";
 		}
 		boolean notUpdated = true;
 		int attemptNum = 1;
-		while (notUpdated)
-		{
-			try
-			{
+		while (notUpdated) {
+			try {
 				Document doc = Jsoup.connect(target).get();
 				Elements links = doc.select(linksContainer);
-				if (!links.eq(0).attr("abs:href").equals(this.staleLink)) // not equal (! for real)
-				{
+				if (!links.eq(0).attr("abs:href").equals(this.staleLink)) { // not equal (! for real)
 					notUpdated = false;
-					for (ChromeSBotThread sbot : this.sBots)
-					{
+					for (ChromeSBotThread sbot : this.sBots) {
 						sbot.setLinks(links);
 					}
 					System.out.println("SHOP HAS BEEN UPDATED.");
 					break; // redundant
 				}
-				else
-				{
-					try
-					{
+				else {
+					try {
 						System.out.println("REFRESHING " + attemptNum + ". SHOP NOT UPDATED");
 						Thread.sleep(this.refreshDelay);
 						attemptNum++;
-					}
-					catch (Exception e)
-					{
+					} catch (Exception e) {
 						System.out.println("Error in nested try-catch of refreshPage.");
 					}
 				}
 			}
-			catch (Exception e)
-			{
+			catch (Exception e) {
 				System.out.println("Error in refreshPage.");
 			}
 		}
 	}
 
-	private void grabLinks()
-	{
+	private void grabLinks() {
 		String target = "http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/sh" + "op/" + this.shopPath;
 		String linksContainer;
-		if (this.shopPath == "new" || this.shopPath == "all")
-		{
+		if (this.shopPath == "new" || this.shopPath == "all") {
 			linksContainer = "div.shop a";
 		}
-		else 
-		{
+		else {
 			linksContainer = "div.turbolink_scroller a";
 		}
-		try 
-		{
+		try {
 			Document doc = Jsoup.connect(target).get();
 			Elements links = doc.select(linksContainer);
-			for (ChromeSBotThread sbot : this.sBots)
-			{
+			for (ChromeSBotThread sbot : this.sBots) {
 				sbot.setLinks(links);
 			}
 			System.out.println("SHOP HAS BEEN UPDATED.");
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			System.out.println("Error in notFirstDrop.");
 		}
 	}
 	
-	private void cart()
-	{
-		for (ChromeSBotThread sBot : this.sBots)
-		{
+	private void cart() {
+		for (ChromeSBotThread sBot : this.sBots) {
 			long startTime = System.nanoTime();
 			
 			sBot.addToCart();
