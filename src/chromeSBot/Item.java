@@ -20,14 +20,12 @@ public class Item {
 	
 	public String getUrl() { return this.url; }
 	
-	public void printItem() 
-	{
+	public void printItem() {
 		System.out.println("Number: " + this.number);
 		System.out.println("Size: " + this.size);
 	}
 	
-	public boolean isValid()
-	{
+	public boolean isValid() {
 		return !(this.number == -1);
 	}
 }

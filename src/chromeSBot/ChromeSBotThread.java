@@ -56,12 +56,20 @@ public class ChromeSBotThread implements Runnable
 		this.driver = new ChromeDriver(options);
 	}
 	
-	public void setLinks(Elements links) {
-		this.links = links;
+	public void setCartDelay(int delay) {
+		this.cartDelay = delay;
+	}
+	
+	public void setOrderPath(String path) {
+		this.orderPath = path;
 	}
 	
 	public void setOrder(List<Item> order) {
 		this.order = order;
+	}
+	
+	public void setLinks(Elements links) {
+		this.links = links;
 	}
 	
 	// read .txt file from specified path and build order
@@ -88,7 +96,9 @@ public class ChromeSBotThread implements Runnable
 					line.trim(); // what is this for...
 					continue;
 				}
-				else { break outer;	}
+				else { 
+					break outer;	
+				}
 			}
 			if (item.isValid()) {
 				System.out.println("Item " + itemCount + " is valid. Appended to order.");
@@ -141,8 +151,11 @@ public class ChromeSBotThread implements Runnable
 	public void addToCart() {
 		for (Item item : this.order) {
 			addItem(item);
-			try { Thread.sleep(this.cartDelay); }
-			catch (Exception e) { e.printStackTrace(); }
+			try { 
+				Thread.sleep(this.cartDelay); 
+			} catch (Exception e) { 
+				e.printStackTrace(); 
+			}
 		}
 	}
 
