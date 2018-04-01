@@ -50,6 +50,7 @@ public class ChromeSBotThread implements Runnable
 			System.out.println("(TXT) BUILDING ORDER...");
 			this.buildOrderFromFile();
 			System.out.println("(TXT) BUILT.");
+			this.confirmOrder();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -64,10 +65,10 @@ public class ChromeSBotThread implements Runnable
 		options.addArguments("disable-infobars");
 		this.driver = new ChromeDriver(options);
 		try {
-			System.out.print(this.name);
+			System.out.print(this.name + " ");
 			System.out.println("(TXT) BUILDING ORDER...");
 			this.buildOrderFromFile();
-			System.out.print(this.name);
+			System.out.print(this.name + " ");
 			System.out.println("(TXT) BUILT.");
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -107,13 +108,13 @@ public class ChromeSBotThread implements Runnable
 			line = line.trim();
 			Item item = new Item();
 			while (!line.equals("-")) { // inner
-				String[] parts = line.split(":");
-				if (parts.length > 1) {
-					parts[0] = parts[0].trim().toLowerCase();
-					parts[1] = parts[1].trim();
-					setField(item, parts);
+				String[] params = line.split(":");
+				if (params.length > 1) {
+					params[0] = params[0].trim().toLowerCase();
+					params[1] = params[1].trim();
+					setField(item, params);
 				} else {
-					System.out.println("NO VALUE FOR " + parts[0] + " FIELD***");
+					System.out.println("NO VALUE FOR " + params[0] + " FIELD***");
 				}
 				if ((line = br.readLine()) != null) {
 					line.trim(); // to match trim call of outer???
@@ -123,7 +124,7 @@ public class ChromeSBotThread implements Runnable
 				}
 			}
 			if (item.isValid()) {
-				System.out.println("Item " + itemCount + " is valid. Appended to order.");
+//				System.out.println("Item " + itemCount + " is valid. Appended to order.");
 				this.order.add(item);
 				itemCount++;
 			} else {
@@ -146,6 +147,7 @@ public class ChromeSBotThread implements Runnable
 			case "number":
 				if (parts[1].matches("\\d+")) { // regex match for digits 
 					item.setNumber(Integer.parseInt(parts[1]));
+//					System.out.println("Set " + parts[0] + " field --> " + parts[1]);
 				}
 				else {
 					System.out.println("NUMBER FIELD IS NOT A NUMBER.***");
@@ -154,18 +156,21 @@ public class ChromeSBotThread implements Runnable
 			case "size":
 				// check proper input (like regex match for number)!!!
 				item.setSize(parts[1]);
+//				System.out.println("Set " + parts[0] + " field --> " + parts[1]);
 				break;
+			default:
+				System.out.println("FIELD NEITHER NUMBER NOR SIZE. [" + parts[0] + ", " + parts[1] + "]***");
 		}
-		System.out.println("Set " + parts[0] + " field --> " + parts[1]);
 	}
 
 	// prints out each order item for user to confirm
 	public void confirmOrder() {
 		int itemCount = 1;
 		for (Item item : this.order) {
-			System.out.print(this.name);
-			System.out.println("----- Item " + itemCount + " -----");
-			item.printItem();
+			System.out.print(this.name + " ");
+			System.out.println(itemCount + ". " + item.getNumber() + " - " + item.getSize());
+//			System.out.println("----- Item " + itemCount + " -----");
+//			item.printItem();
 			itemCount++;
 		}
 	}
@@ -187,7 +192,7 @@ public class ChromeSBotThread implements Runnable
 		String targetLink = this.links.eq(item.getNumber()).attr("abs:href");
 		if (targetLink != null ) {
 			this.newTab();
-			System.out.print(this.name);
+			System.out.print(this.name + " ");
 			System.out.println("Navigating to: " + targetLink);
 			this.driver.get(targetLink);
 
@@ -209,21 +214,21 @@ public class ChromeSBotThread implements Runnable
 	private void selectSize(String size) {
 		try {
 			Select sizeSelect = new Select(this.driver.findElement(By.id("s")));
-			System.out.print(this.name);
+			System.out.print(this.name + " ");
 			System.out.println(this.driver.getTitle() + " // Selected size --> " + size);
 			sizeSelect.selectByVisibleText(size);
 		}
 		catch (Exception e) {
 			System.out.println(this.driver.getTitle() + " // COULD NOT SELECT SIZE BY ID***");
-			System.out.print(this.name);
+			System.out.print(this.name + " ");
 			System.out.println("Attempting to select size by tagname...");
 			try {
 				Select sizeSelect = new Select(this.driver.findElement(By.tagName("select")));
-				System.out.print(this.name);
+				System.out.print(this.name + " ");
 				System.out.println(this.driver.getTitle() + " // Selected size --> " + size);
 				sizeSelect.selectByVisibleText(size);
 			} catch (Exception e2) {
-				System.out.print(this.name);
+				System.out.print(this.name + " ");
 				System.out.println(this.driver.getTitle() + " // COULD NOT SELECT SIZE BY TAGNAME GG***");
 			}
 		}
@@ -234,20 +239,20 @@ public class ChromeSBotThread implements Runnable
 		try {
 			WebElement addToCartButton = this.driver.findElement(By.xpath("//input[@value='add to cart']"));
 			addToCartButton.sendKeys(Keys.ENTER);
-			System.out.print(this.name);
+			System.out.print(this.name + " ");
 			System.out.println(this.driver.getTitle() + " // Successfully carted.");
 		} catch (Exception e) {
-			System.out.print(this.name);
+			System.out.print(this.name + " ");
 			System.out.println(this.driver.getTitle() + " // COULD NOT CART ITEM***");
-			System.out.print(this.name);
+			System.out.print(this.name + " ");
 			System.out.println("Attemping to cart item again...");
 			try {
 				WebElement addToCartButton = this.driver.findElement(By.name("commit"));
 				addToCartButton.sendKeys(Keys.ENTER);
-				System.out.print(this.name);
+				System.out.print(this.name + " ");
 				System.out.println(this.driver.getTitle() + " // Successfully carted.");
 			} catch (Exception e2) {
-				System.out.print(this.name);
+				System.out.print(this.name + " ");
 				System.out.println(this.driver.getTitle() + " // COULD NOT CART ITEM AGAIN GG***");
 			}
 		}
@@ -258,7 +263,7 @@ public class ChromeSBotThread implements Runnable
 		try { 
 			Thread.sleep(this.cartDelay); 
 			this.newTab();
-			System.out.print(this.name);
+			System.out.print(this.name + " ");
 			System.out.println("Navigating to checkout...");
 			this.driver.get("http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/chec" + "kout");
 		} catch (Exception e) { 
@@ -274,7 +279,8 @@ public class ChromeSBotThread implements Runnable
 		long endTime = System.nanoTime();
 		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
 
-		System.out.println(this.name + ": " + elapsedTime + " seconds.");
+		System.out.print(this.name + " ");
+		System.out.println(elapsedTime + " seconds.");
 	}
 	
 	public void run() {
