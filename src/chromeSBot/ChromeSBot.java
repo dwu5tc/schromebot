@@ -90,7 +90,7 @@ public class ChromeSBot {
 			delay = reader.nextInt();
 			chromeSBot.setRefreshDelay(delay);	
 			
-			if (chromeSBot.refreshDelay != 0) { 
+			if (chromeSBot.refreshDelay > 0) { 
 				System.out.println("Will refresh every " + delay + "ms.");
 				System.out.println("Enter the expected number of new items to begin running bots.");
 				int num = reader.nextInt();
@@ -98,9 +98,14 @@ public class ChromeSBot {
 				
 				chromeSBot.refreshAndGrabLinks();
 				chromeSBot.run();
-			} else {
+			} else if (chromeSBot.refreshDelay == 0) {
 				chromeSBot.grabLinks();
 				chromeSBot.test();
+			} else if (chromeSBot.refreshDelay == -1) {
+				chromeSBot.grabLinks();
+				chromeSBot.run();
+			} else {
+				
 			}
 		} else {
 			chromeSBot.grabLinks();
@@ -132,7 +137,7 @@ public class ChromeSBot {
 			
 			for (int i = 0; i < numOfTestBots; i++) {
 				ChromeSBotThread testBot = new ChromeSBotThread();
-				testBot.setName("[test " + (i + 1) + "]");
+				testBot.setThreadName("[test " + (i + 1) + "]");
 				this.bots.add(testBot);
 			}
 		}
@@ -220,7 +225,7 @@ public class ChromeSBot {
 			}
 	
 			this.staleLink = links.eq(0).attr("abs:href");
-			System.out.println("STALE LINK SET: " + this.staleLink);
+			System.out.println("Stale link set --> " + this.staleLink);
 		} catch (Exception e) {
 			System.out.println("Error in grabStaleLink.");
 		}
@@ -311,7 +316,7 @@ public class ChromeSBot {
 	
 	private void run() {
 		for (ChromeSBotThread bot : this.bots) {
-			bot.run();
+			bot.getThread().start();
 		}
 	}
 	

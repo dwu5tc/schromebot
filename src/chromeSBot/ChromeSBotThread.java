@@ -7,10 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
@@ -25,7 +22,7 @@ import org.openqa.selenium.JavascriptExecutor;
 public class ChromeSBotThread implements Runnable
 {
 	private Thread thread;
-	private String name;
+//	private String name;
 	private WebDriver driver;
 	
 	private int cartDelay;
@@ -38,7 +35,7 @@ public class ChromeSBotThread implements Runnable
 	// chrome profile to automate, 
 	// path for order construction
 	public ChromeSBotThread(int cartDelay, String profile, String orderPath) {
-		this.name = "[" + cartDelay + " " + profile + " " + orderPath + "]";
+		this.thread = new Thread(this, "[" + cartDelay + " " + profile + " " + orderPath + "]");
 		this.cartDelay = cartDelay;
 		this.orderPath = orderPath;
 		System.setProperty("webdriver.chrome.driver", "chromedriver"); // chromedriver.exe for windows
@@ -47,9 +44,8 @@ public class ChromeSBotThread implements Runnable
 		options.addArguments("disable-infobars");
 		this.driver = new ChromeDriver(options);
 		try {
-			System.out.println("(TXT) BUILDING ORDER...");
+			System.out.println("Building order: " + this.orderPath);
 			this.buildOrderFromFile();
-			System.out.println("(TXT) BUILT.");
 			this.confirmOrder();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -58,6 +54,7 @@ public class ChromeSBotThread implements Runnable
 	
 	// for testing (no profile used)
 	public ChromeSBotThread() {
+		this.thread = new Thread(this);
 		this.orderPath = "test.txt";
 		this.cartDelay = 200;
 		System.setProperty("webdriver.chrome.driver", "chromedriver"); // chromedriver.exe for windows
@@ -65,18 +62,18 @@ public class ChromeSBotThread implements Runnable
 		options.addArguments("disable-infobars");
 		this.driver = new ChromeDriver(options);
 		try {
-			System.out.print(this.name + " ");
+			System.out.print(this.thread.getName() + " ");;
 			System.out.println("(TXT) BUILDING ORDER...");
 			this.buildOrderFromFile();
-			System.out.print(this.name + " ");
+			System.out.print(this.thread.getName() + " ");;
 			System.out.println("(TXT) BUILT.");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
-	public void setName(String name) {
-		this.name = name;
+	public void setThreadName(String name) {
+		this.thread.setName(name);
 	}
 	
 	// are these even necessary???
@@ -94,6 +91,10 @@ public class ChromeSBotThread implements Runnable
 	
 	public void setLinks(Elements links) {
 		this.links = links;
+	}
+	
+	public Thread getThread() {
+		return this.thread;
 	}
 	
 	// read .txt file from specified path and build order
@@ -132,6 +133,9 @@ public class ChromeSBotThread implements Runnable
 				itemCount++;
 			}
 		}
+		if (this.order.size() > 0) {
+			System.out.println("Order successfully built.");
+		}
 		br.close();
 	}
 
@@ -167,7 +171,7 @@ public class ChromeSBotThread implements Runnable
 	public void confirmOrder() {
 		int itemCount = 1;
 		for (Item item : this.order) {
-			System.out.print(this.name + " ");
+			System.out.print(this.thread.getName() + " ");;
 			System.out.println(itemCount + ". " + item.getNumber() + " - " + item.getSize());
 //			System.out.println("----- Item " + itemCount + " -----");
 //			item.printItem();
@@ -192,7 +196,7 @@ public class ChromeSBotThread implements Runnable
 		String targetLink = this.links.eq(item.getNumber()).attr("abs:href");
 		if (targetLink != null ) {
 			this.newTab();
-			System.out.print(this.name + " ");
+			System.out.print(this.thread.getName() + " ");;
 			System.out.println("Navigating to: " + targetLink);
 			this.driver.get(targetLink);
 
@@ -214,21 +218,21 @@ public class ChromeSBotThread implements Runnable
 	private void selectSize(String size) {
 		try {
 			Select sizeSelect = new Select(this.driver.findElement(By.id("s")));
-			System.out.print(this.name + " ");
+			System.out.print(this.thread.getName() + " ");;
 			System.out.println(this.driver.getTitle() + " // Selected size --> " + size);
 			sizeSelect.selectByVisibleText(size);
 		}
 		catch (Exception e) {
 			System.out.println(this.driver.getTitle() + " // COULD NOT SELECT SIZE BY ID***");
-			System.out.print(this.name + " ");
+			System.out.print(this.thread.getName() + " ");;
 			System.out.println("Attempting to select size by tagname...");
 			try {
 				Select sizeSelect = new Select(this.driver.findElement(By.tagName("select")));
-				System.out.print(this.name + " ");
+				System.out.print(this.thread.getName() + " ");;
 				System.out.println(this.driver.getTitle() + " // Selected size --> " + size);
 				sizeSelect.selectByVisibleText(size);
 			} catch (Exception e2) {
-				System.out.print(this.name + " ");
+				System.out.print(this.thread.getName() + " ");;
 				System.out.println(this.driver.getTitle() + " // COULD NOT SELECT SIZE BY TAGNAME GG***");
 			}
 		}
@@ -239,20 +243,20 @@ public class ChromeSBotThread implements Runnable
 		try {
 			WebElement addToCartButton = this.driver.findElement(By.xpath("//input[@value='add to cart']"));
 			addToCartButton.sendKeys(Keys.ENTER);
-			System.out.print(this.name + " ");
+			System.out.print(this.thread.getName() + " ");;
 			System.out.println(this.driver.getTitle() + " // Successfully carted.");
 		} catch (Exception e) {
-			System.out.print(this.name + " ");
+			System.out.print(this.thread.getName() + " ");;
 			System.out.println(this.driver.getTitle() + " // COULD NOT CART ITEM***");
-			System.out.print(this.name + " ");
+			System.out.print(this.thread.getName() + " ");;
 			System.out.println("Attemping to cart item again...");
 			try {
 				WebElement addToCartButton = this.driver.findElement(By.name("commit"));
 				addToCartButton.sendKeys(Keys.ENTER);
-				System.out.print(this.name + " ");
+				System.out.print(this.thread.getName() + " ");;
 				System.out.println(this.driver.getTitle() + " // Successfully carted.");
 			} catch (Exception e2) {
-				System.out.print(this.name + " ");
+				System.out.print(this.thread.getName() + " ");;
 				System.out.println(this.driver.getTitle() + " // COULD NOT CART ITEM AGAIN GG***");
 			}
 		}
@@ -263,7 +267,7 @@ public class ChromeSBotThread implements Runnable
 		try { 
 			Thread.sleep(this.cartDelay); 
 			this.newTab();
-			System.out.print(this.name + " ");
+			System.out.print(this.thread.getName() + " ");;
 			System.out.println("Navigating to checkout...");
 			this.driver.get("http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/chec" + "kout");
 		} catch (Exception e) { 
@@ -279,73 +283,22 @@ public class ChromeSBotThread implements Runnable
 		long endTime = System.nanoTime();
 		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
 
-		System.out.print(this.name + " ");
+		System.out.print(this.thread.getName() + " ");;
 		System.out.println(elapsedTime + " seconds.");
 	}
 	
 	public void run() {
-//		Scanner reader = new Scanner(System.in);
-//
-////		System.out.println("ENTER TIME BETWEEN PAGE RESFRESHES (IN MS). 300-1000 RECOMMENDED.");
-////		int sleep = reader.nextInt();
-////		System.out.println("WILL REFRESH EVERY " + sleep + "MS.");
-//		
-////		ChromeSBotThread sBot = null;
-////		String orderPath = null;
-////		sBot = new ChromeSBotThread(sleep, args[0]);
-////		orderPath = args[1];
-////		sBot = new ChromeSBotThread(sleep, "profile");
-////		orderPath = "order.txt";
-//		
-//		
-//		
-//		System.out.println("(TXT) BUILDING ORDER...");
-//		try 
-//		{ 
-//			this.buildOrderFromFile(this.orderPath); 
-//		}
-//		catch (IOException e) 
-//		{ 
-//			e.printStackTrace(); 
-//		}
-//
-//		System.out.println("ORDER BUILT.");
-//		this.confirmOrder();
-//
-//		System.out.println("ENTER A NUMBER TO BEGIN REFRESHING.");
-////		System.out.println("ENTER A NUMBER TO GRAB LINKS AND BEGIN CARTING.");
-//		reader.nextInt();
-//		
-//		if (this.refreshDelay >= 0) 
-//		{
-//			this.refreshAndGrabLinks();
-//		}
-//		else
-//		{	
-//			this.grabLinks(); 
-//		}
-//		
-////		sBot.grabLinks("new");
-////		System.out.println("SITE HAS BEEN UPDATED. CARTING ITEMS NOW...");
-//
-//		long startTime = System.nanoTime();
-//
-//		this.addToCart();
-//		this.checkout();
-//
-//		long endTime = System.nanoTime();
-//		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
-//
-//		System.out.println("ATC: " + elapsedTime + " seconds.");
-//
-//		reader.close();
-	}
-//	
-//	// how does this work...
-	public void start() {
-		if (this.thread == null) {
-			this.thread = new Thread(this, this.name);
-			thread.start();
+		long startTime = System.nanoTime();
+		try {
+			this.cartItems();
+			this.checkout();
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+		long endTime = System.nanoTime();
+		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
+
+		System.out.print(this.thread.getName() + " ");;
+		System.out.println(elapsedTime + " seconds.");
 	}
 }
