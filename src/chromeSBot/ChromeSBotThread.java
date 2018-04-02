@@ -22,19 +22,22 @@ import org.openqa.selenium.JavascriptExecutor;
 public class ChromeSBotThread implements Runnable
 {
 	private Thread thread;
-//	private String name;
 	private WebDriver driver;
 	
 	private int cartDelay;
 	private String orderPath;
 	
+	private Boolean start;
 	private List<Item> order = new ArrayList<Item>();
 	private Elements links;
+	
+	private double time;
 	
 	// set delay time between cart attempts, 
 	// chrome profile to automate, 
 	// path for order construction
 	public ChromeSBotThread(int cartDelay, String profile, String orderPath) {
+		this.start = false;
 		this.thread = new Thread(this, "[" + cartDelay + " " + profile + " " + orderPath + "]");
 		this.cartDelay = cartDelay;
 		this.orderPath = orderPath;
@@ -54,6 +57,7 @@ public class ChromeSBotThread implements Runnable
 	
 	// for testing (no profile used)
 	public ChromeSBotThread() {
+		this.start = false;
 		this.thread = new Thread(this);
 		this.orderPath = "test.txt";
 		this.cartDelay = 200;
@@ -62,11 +66,9 @@ public class ChromeSBotThread implements Runnable
 		options.addArguments("disable-infobars");
 		this.driver = new ChromeDriver(options);
 		try {
-			System.out.print(this.thread.getName() + " ");;
-			System.out.println("(TXT) BUILDING ORDER...");
+			System.out.println("Building order: " + this.orderPath);
 			this.buildOrderFromFile();
-			System.out.print(this.thread.getName() + " ");;
-			System.out.println("(TXT) BUILT.");
+			this.confirmOrder();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -93,8 +95,16 @@ public class ChromeSBotThread implements Runnable
 		this.links = links;
 	}
 	
+	public void start() {
+		this.start = true;
+	}
+	
 	public Thread getThread() {
 		return this.thread;
+	}
+	
+	public double getTime() {
+		return this.time;
 	}
 	
 	// read .txt file from specified path and build order
@@ -287,17 +297,71 @@ public class ChromeSBotThread implements Runnable
 		System.out.println(elapsedTime + " seconds.");
 	}
 	
+//	public void run() {
+//		while (!this.start) {
+//			try {
+//				Thread.sleep(50);
+//			} catch (Exception e) {
+//				// handle
+//			}
+//		}
+//		long startTime = System.nanoTime();
+//		try {
+//			this.cartItems();
+//			this.checkout();
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		long endTime = System.nanoTime();
+//		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
+//
+//		System.out.print(this.thread.getName() + " ");;
+//		System.out.println(elapsedTime + " seconds.");
+//	}
+	
+//	public void run() {
+//		long startTime = System.nanoTime();
+//		try {
+//			this.cartItems();
+//			this.checkout();
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		long endTime = System.nanoTime();
+//		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
+//
+//		System.out.print(this.thread.getName() + " ");;
+//		System.out.println(elapsedTime + " seconds.");
+//	}
+	
 	public void run() {
+		System.out.println(this.thread + " has been created.");
+//		while (this.start != true) {
+//			try {
+//				Thread.sleep(50);
+//			} catch (Exception e) {
+//				// handle
+//			}
+//		}
+		System.out.println(this.thread + " running now...");
 		long startTime = System.nanoTime();
 		try {
-			this.cartItems();
-			this.checkout();
+			this.driver.get("https://www.facebook.com");
+			this.newTab();
+			this.driver.get("https://www.instagram.com");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		long endTime = System.nanoTime();
 		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
-
+		this.time = elapsedTime;
+		
+		try {
+			this.driver.quit();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	
 		System.out.print(this.thread.getName() + " ");;
 		System.out.println(elapsedTime + " seconds.");
 	}

@@ -59,9 +59,11 @@ public class ChromeSBot {
 	private String shopPath;
 	
 	private String staleLink;
-	private int expectedNumOfLinks;
+	private int expectedNumOfLinks; 
+	
+	// error handling/logging
 	private Elements falseLinks;
-	private List<String> errors = new ArrayList<String>();
+	private List<String> errors = new ArrayList<String>(); 
 	
 	public static void main(String[] args) {
 		
@@ -72,6 +74,26 @@ public class ChromeSBot {
 		}
 		
 		ChromeSBot chromeSBot;
+		
+		// for testing
+		List<Double> times = new ArrayList<Double>();
+		for (int i = 0; i <= 10; i++) {
+			String[] testArgs = {"test"};
+			chromeSBot = new ChromeSBot(testArgs);
+			chromeSBot.run();
+			try {
+				Thread.sleep(6000);
+				for (double time : chromeSBot.getBotTimes()) {
+					times.add(time);
+				}
+			} catch (Exception e) {
+				// handle
+			}
+		}
+		for (double time : times) {
+			System.out.println(time);
+		}
+		
 		if (args.length < 1) { // just for testing in eclipse
 			String[] testArgs = {"test"};
 			chromeSBot = new ChromeSBot(testArgs);
@@ -84,8 +106,9 @@ public class ChromeSBot {
 		if (chromeSBot.isReal) {
 			chromeSBot.grabStaleLink();
 			
-			System.out.println("Enter an integer to set the delay time between page refreshes (in ms). 300-800 recommended");
-			System.out.println("Enter 0 to skip refreshing and begin running.");
+			System.out.println("Enter an INTEGER to set the delay time between page refreshes (in ms). 300-800 recommended.");
+			System.out.println("Enter 0 to test sequential.");
+			System.out.println("Enter -1 to test multi-threaded.");
 			int delay = 500; // default refresh delay
 			delay = reader.nextInt();
 			chromeSBot.setRefreshDelay(delay);	
@@ -109,9 +132,19 @@ public class ChromeSBot {
 			}
 		} else {
 			chromeSBot.grabLinks();
-			System.out.println("Enter an integer to begin testing.");
-			reader.nextInt();
-			chromeSBot.test();
+			System.out.println("Enter POSITIVE INTEGER to test multi-threaded.");
+			System.out.println("Enter NEGATIVE INTEGER to test sequential.");
+			if (reader.nextInt() > 0) {
+				chromeSBot.run();
+//				System.out.println("Threads have been created.");
+//				System.out.println("Enter POSITIVE INTEGER to begin running bots.");
+//				if (reader.nextInt() > 0) {
+//					System.out.println("Running now...");
+//					chromeSBot.startAllBots();
+//				}
+			} else {
+				chromeSBot.test();
+			}
 		}		
 	
 		reader.close();
@@ -126,7 +159,6 @@ public class ChromeSBot {
 	{	
 		if (args.length < 1 || args[0].equals("test")) {
 			debugPrint("in test");
-			debugPrint("num of args: " + args.length);
 			this.isReal = false;
 			this.shopPath = "all";
 			int numOfTestBots = 3; // default number of test bots
@@ -317,6 +349,21 @@ public class ChromeSBot {
 	private void run() {
 		for (ChromeSBotThread bot : this.bots) {
 			bot.getThread().start();
+		}
+	}
+	
+	// for testing
+	private List<Double> getBotTimes() {
+		List<Double> times = new ArrayList<Double>();
+		for (ChromeSBotThread bot : this.bots) {
+			times.add(bot.getTime());
+		}
+		return times;
+	}
+	
+	private void startAllBots() {
+		for (ChromeSBotThread bot : this.bots) {
+			bot.start();
 		}
 	}
 	
