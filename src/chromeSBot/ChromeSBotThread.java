@@ -50,7 +50,7 @@ public class ChromeSBotThread implements Runnable
 			this.buildOrderFromFile();
 			this.confirmOrder();
 		} catch (Exception e) {
-			e.printStackTrace();
+			// handle!!!
 		}
 	}
 	
@@ -69,7 +69,7 @@ public class ChromeSBotThread implements Runnable
 			this.buildOrderFromFile();
 			this.confirmOrder();
 		} catch (Exception e) {
-			e.printStackTrace();
+			// handle!!!
 		}
 	}
 	
@@ -195,7 +195,7 @@ public class ChromeSBotThread implements Runnable
 			try { 
 				Thread.sleep(this.cartDelay); 
 			} catch (Exception e) { 
-				e.printStackTrace(); 
+				// handle!!! 
 			}
 		}
 	}
@@ -280,7 +280,7 @@ public class ChromeSBotThread implements Runnable
 			System.out.println("Navigating to checkout...");
 			this.driver.get("http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/chec" + "kout");
 		} catch (Exception e) { 
-			e.printStackTrace(); 
+			// handle!!! 
 		} 
 	}
 	
@@ -293,7 +293,7 @@ public class ChromeSBotThread implements Runnable
 //			this.driver.get("https://www.instagram.com");
 //			this.driver.quit();
 		} catch (Exception e) {
-			e.printStackTrace();
+			// handle!!! 
 		}
 		long endTime = System.nanoTime();
 		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
@@ -309,7 +309,7 @@ public class ChromeSBotThread implements Runnable
 			this.cartItems();
 			this.checkout();
 		} catch (Exception e) {
-			e.printStackTrace();
+			// handle!!!
 		}
 		long endTime = System.nanoTime();
 		double elapsedTime = (double)(endTime - startTime)/1000000000.00;

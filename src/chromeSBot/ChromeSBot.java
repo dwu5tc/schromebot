@@ -61,6 +61,7 @@ public class ChromeSBot {
 	// error handling/logging
 	private List<Elements> falseLinks = new ArrayList<Elements>();
 	private List<String> errors = new ArrayList<String>(); 
+	private String updatedHTML;
 	
 	public static void main(String[] args) {	
 		for (String arg : args) {
@@ -84,13 +85,13 @@ public class ChromeSBot {
 //			System.out.println("Enter 0 to test sequential.");
 //			System.out.println("Enter -1 to test multi-threaded.");
 			int delay = reader.nextInt();
-			chromeSBot.setRefreshDelay(delay);
+			chromeSBot.refreshDelay = delay;
 			
 			if (chromeSBot.refreshDelay > 0) { 
 				System.out.println("Will refresh every " + chromeSBot.refreshDelay + "ms.");
 				System.out.println("Enter the expected number of new items to begin running bots.");
 				int num = reader.nextInt();
-				chromeSBot.setExpecetedNumOfLinks(num);
+				chromeSBot.expectedNumOfLinks = num;
 				
 				chromeSBot.refreshAndGrabLinks();
 				chromeSBot.run();
@@ -100,6 +101,7 @@ public class ChromeSBot {
 				for (String error : chromeSBot.errors) {
 					System.out.println(error);
 				}
+				System.out.println(chromeSBot.updatedHTML);
 				reader.close();
 				return;
 			}
@@ -176,7 +178,7 @@ public class ChromeSBot {
 			try {
 				this.configureBots(configPath);
 			} catch (Exception e) {
-				e.printStackTrace();
+				// error handle
 			}
 		}
 	}
@@ -185,9 +187,9 @@ public class ChromeSBot {
 //		this.bots = bots;
 //	}
 	
-	private void setRefreshDelay(int time) {
-		this.refreshDelay = time;
-	}
+//	private void setRefreshDelay(int time) {
+//		this.refreshDelay = time;
+//	}
 	
 //	private void setIsReal(boolean bool) {
 //		this.isReal = bool;
@@ -201,9 +203,9 @@ public class ChromeSBot {
 //		this.staleLink = path;
 //	}
 	
-	private void setExpecetedNumOfLinks(int num) {
-		this.expectedNumOfLinks = num;
-	}
+//	private void setExpectedNumOfLinks(int num) {
+//		this.expectedNumOfLinks = num;
+//	}
 	
 	// 
 	private void configureBots(String configPath) throws IOException {
@@ -267,6 +269,7 @@ public class ChromeSBot {
 					// check for shop update false positive
 					// move this into another while loop below???
 					if (links.size() < 1) {
+						this.errors.add(doc.html());
 						System.out.println("SHOP LINKS HAVE BEEN REMOVED. 0 LINKS FOUND.");
 						Thread.sleep(this.refreshDelay);
 						attemptNum++;
@@ -280,8 +283,16 @@ public class ChromeSBot {
 						attemptNum++;
 						continue;
 					}
+					if (links.eq(0).attr("abs:href").isEmpty()) {
+						this.errors.add(doc.html());
+						System.out.println("SHOP LINKS HAVE BEEN UPDATED BUT THE HREFS ARE EMPTY.");
+						Thread.sleep(this.refreshDelay);
+						attemptNum++;
+						continue;
+					}
 					// shop update 
 					updated = true;
+					this.updatedHTML = doc.html();
 					for (ChromeSBotThread bot : this.bots) {
 						bot.setLinks(links);
 					}
