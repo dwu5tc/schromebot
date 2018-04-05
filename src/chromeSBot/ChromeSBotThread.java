@@ -26,21 +26,20 @@ public class ChromeSBotThread implements Runnable
 	private int cartDelay;
 	private String orderPath;
 	
-	private Boolean start;
 	private List<Item> order = new ArrayList<Item>();
 	private Elements links;
 	
-	private double time;
 	private double startTime;
+	private double elapsedTime;
 	
 	// set delay time between cart attempts, 
 	// chrome profile to automate, 
 	// path for order construction
 	public ChromeSBotThread(int cartDelay, String profile, String orderPath) {
-		this.start = false;
 		this.thread = new Thread(this, "[" + cartDelay + " " + profile + " " + orderPath + "]");
 		this.cartDelay = cartDelay;
 		this.orderPath = orderPath;
+		this.startTime = System.nanoTime();
 		System.setProperty("webdriver.chrome.driver", "chromedriver"); // chromedriver.exe for windows
 		ChromeOptions options = new ChromeOptions();
 		options.addArguments("user-data-dir=" + profile);
@@ -57,10 +56,10 @@ public class ChromeSBotThread implements Runnable
 	
 	// for testing (no profile used)
 	public ChromeSBotThread() {
-		this.start = false;
 		this.thread = new Thread(this);
 		this.orderPath = "test.txt";
 		this.cartDelay = 200;
+		this.startTime = System.nanoTime();
 		System.setProperty("webdriver.chrome.driver", "chromedriver"); // chromedriver.exe for windows
 		ChromeOptions options = new ChromeOptions();
 		options.addArguments("disable-infobars");
@@ -74,7 +73,6 @@ public class ChromeSBotThread implements Runnable
 		}
 	}
 	
-	// for testing
 	public void setStartTime(long time) {
 		this.startTime = time;
 	}
@@ -100,16 +98,12 @@ public class ChromeSBotThread implements Runnable
 		this.links = links;
 	}
 	
-	public void start() {
-		this.start = true;
-	}
-	
 	public Thread getThread() {
 		return this.thread;
 	}
 	
-	public double getTime() {
-		return this.time;
+	public double getElapsedTime() {
+		return this.elapsedTime;
 	}
 	
 	// read .txt file from specified path and build order
@@ -291,98 +285,37 @@ public class ChromeSBotThread implements Runnable
 	}
 	
 	public void test() {
-		long startTime = System.nanoTime();
-//		this.cartItems();
-//		this.checkout();
 		try {
-			this.driver.get("https://www.facebook.com");
-			this.newTab();
-			this.driver.get("https://www.instagram.com");
+			this.cartItems();
+			this.checkout();
+//			this.driver.get("https://www.facebook.com");
+//			this.newTab();
+//			this.driver.get("https://www.instagram.com");
+//			this.driver.quit();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 		long endTime = System.nanoTime();
 		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
-		this.time = elapsedTime;
-		
-		try {
-			this.driver.quit();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		this.elapsedTime = elapsedTime;
 		
 		System.out.print(this.thread.getName() + " ");;
 		System.out.println(elapsedTime + " seconds.");
-		
+		return;
 	}
 	
-//	public void run() {
-//		while (!this.start) {
-//			try {
-//				Thread.sleep(50);
-//			} catch (Exception e) {
-//				// handle
-//			}
-//		}
-//		long startTime = System.nanoTime();
-//		try {
-//			this.cartItems();
-//			this.checkout();
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-//		long endTime = System.nanoTime();
-//		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
-//
-//		System.out.print(this.thread.getName() + " ");;
-//		System.out.println(elapsedTime + " seconds.");
-//	}
-	
-//	public void run() {
-//		long startTime = System.nanoTime();
-//		try {
-//			this.cartItems();
-//			this.checkout();
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-//		long endTime = System.nanoTime();
-//		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
-//
-//		System.out.print(this.thread.getName() + " ");;
-//		System.out.println(elapsedTime + " seconds.");
-//	}
-	
 	public void run() {
-//		this.startTime = System.nanoTime();
-		System.out.println(this.thread + " has been created.");
-//		while (this.start != true) {
-//			try {
-//				Thread.sleep(50);
-//			} catch (Exception e) {
-//				// handle
-//			}
-//		}
-//		System.out.println(this.thread + " running now...");
 		try {
-			this.driver.get("https://www.facebook.com");
-			this.newTab();
-			this.driver.get("https://www.instagram.com");
+			this.cartItems();
+			this.checkout();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		long endTime = System.nanoTime();
-		double elapsedTime = (double)(endTime - this.startTime)/1000000000.00;
-		this.time = elapsedTime;
-		
-		try {
-			this.driver.quit();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	
+		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
+
 		System.out.print(this.thread.getName() + " ");;
 		System.out.println(elapsedTime + " seconds.");
+		return;
 	}
 }

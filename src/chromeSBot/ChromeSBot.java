@@ -7,9 +7,6 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -62,133 +59,50 @@ public class ChromeSBot {
 	private int expectedNumOfLinks; 
 	
 	// error handling/logging
-	private Elements falseLinks;
+	private List<Elements> falseLinks = new ArrayList<Elements>();
 	private List<String> errors = new ArrayList<String>(); 
 	
-	public static void main(String[] args) {
-		
+	public static void main(String[] args) {	
 		for (String arg : args) {
 			debugPrint("arg: " + arg);
 		}
 		
 		Scanner reader = new Scanner(System.in);
-		
-		
 		ChromeSBot chromeSBot;
 		
-		List<Double> seqtimes = new ArrayList<Double>();
-		List<Double> multitimes = new ArrayList<Double>();
-		List<Double> pooltimes = new ArrayList<Double>();
-		
-		// sequential testing (5 x 5 sequential)
-//		debugPrint("starting sequential tests");
-//		for (int i = 0; i <= 5; i++) {
-//			String[] testArgs = {"test", "1"};
-//			chromeSBot = new ChromeSBot(testArgs);
-//			chromeSBot.test();
-//			for (double time : chromeSBot.getBotTimes()) {
-//				seqtimes.add(time);
-//			}
-//		}
-		ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
-		// pool testing (20 x 4 pool)
-		debugPrint("starting pool tests");
-		for (int i = 0; i <= 6; i++) {
-			
-			String[] testArgs = {"test", "2"};
+		if (args.length < 1) { // just for testing in eclipse
+			String[] testArgs = {"test"};
 			chromeSBot = new ChromeSBot(testArgs);
-			for (ChromeSBotThread bot : chromeSBot.bots) {
-				bot.setStartTime(System.nanoTime());
-				executor.execute(bot);
-			}
+		} else {
+			chromeSBot = new ChromeSBot(args);
+		}
+		
+		if (chromeSBot.isReal) {
+			chromeSBot.grabStaleLink();
 			
-			try { 
-				Thread.sleep(6000);
-				for (double time : chromeSBot.getBotTimes()) {
-					pooltimes.add(time);
-				}
-				Thread.sleep(1000);
-			}
-			catch (Exception e) { }
-		}
-		executor.shutdown();
-		
-		
-
-		// multi-threaded testing ( 20 x 4 parallel)
-		debugPrint("starting multi tests");
-		for (int i = 0; i <= 6; i++) {
-			String[] testArgs = {"test", "2"};
-			chromeSBot = new ChromeSBot(testArgs);
-			long startTime = System.nanoTime();
-			chromeSBot.run(startTime); // begin running threads
-			try {
-				Thread.sleep(1500);
-				System.out.println("2000 SECONDS HAVE PASSED. STARTING ALL BOTS");
-				chromeSBot.startAllBots(); // threads
-			} catch (Exception e){
-				
-			}
-			try {
-				Thread.sleep(6000);
-				for (double time : chromeSBot.getBotTimes()) {
-					multitimes.add(time);
-				}
-			} catch (Exception e) {
-				// handle
-			}
-		}
-		
-		double sum = 0.00;
-		System.out.println("sequential");
-		for (double time : seqtimes) {
-			System.out.println(time);
-			sum += time;
-		}
-		System.out.println("average for sequential: " + (sum / seqtimes.size()));
-		
-		sum = 0.00;
-		System.out.println("multi");
-		for (double time : multitimes) {
-			System.out.println(time);
-			sum += time;
-		}
-		System.out.println("average for multi: " + (sum / multitimes.size()));
-		
-		sum = 0.00;
-		System.out.println("pool");
-		for (double time : pooltimes) {
-			System.out.println(time);
-			sum += time;
-		}
-		System.out.println("average for pool: " + (sum / pooltimes.size()));
-		
-//		if (args.length < 1) { // just for testing in eclipse
-//			String[] testArgs = {"test"};
-//			chromeSBot = new ChromeSBot(testArgs);
-//		} else {
-//			chromeSBot = new ChromeSBot(args);
-//		}
-//		
-//		
-//		if (chromeSBot.isReal) {
-//			chromeSBot.grabStaleLink();
-//			
-//			System.out.println("Enter an INTEGER to set the delay time between page refreshes (in ms). 300-800 recommended.");
+			System.out.println("Enter an INTEGER to set the delay time between page refreshes (in ms). 300-800 recommended.");
 //			System.out.println("Enter 0 to test sequential.");
 //			System.out.println("Enter -1 to test multi-threaded.");
-//			int delay = 500; // default refresh delay
-//			delay = reader.nextInt();
-//			chromeSBot.setRefreshDelay(delay);	
-//			
-//			if (chromeSBot.refreshDelay > 0) { 
-//				System.out.println("Will refresh every " + delay + "ms.");
-//				System.out.println("Enter the expected number of new items to begin running bots.");
-//				int num = reader.nextInt();
-//				chromeSBot.setExpecetedNumOfLinks(num);
-//				
-//				chromeSBot.refreshAndGrabLinks();
-//				chromeSBot.run();
+			int delay = reader.nextInt();
+			chromeSBot.setRefreshDelay(delay);
+			
+			if (chromeSBot.refreshDelay > 0) { 
+				System.out.println("Will refresh every " + chromeSBot.refreshDelay + "ms.");
+				System.out.println("Enter the expected number of new items to begin running bots.");
+				int num = reader.nextInt();
+				chromeSBot.setExpecetedNumOfLinks(num);
+				
+				chromeSBot.refreshAndGrabLinks();
+				chromeSBot.run();
+				for (List<Element> links : chromeSBot.falseLinks) {
+					printLinkHrefs(links);
+				}
+				for (String error : chromeSBot.errors) {
+					System.out.println(error);
+				}
+				reader.close();
+				return;
+			}
 //			} else if (chromeSBot.refreshDelay == 0) {
 //				chromeSBot.grabLinks();
 //				chromeSBot.test();
@@ -213,8 +127,9 @@ public class ChromeSBot {
 //			} else {
 //				chromeSBot.test();
 //			}
-//		}
-//		reader.close();
+		}
+		reader.close();
+		return;
 	}
 	
 	// set boolean for test or real,
@@ -347,23 +262,39 @@ public class ChromeSBot {
 			try {
 				Document doc = Jsoup.connect(target).get();
 				Elements links = doc.select(linksContainer);
-				if (!links.eq(0).attr("abs:href").equals(this.staleLink)) { // ! for real
-					if (links.size() < 1) { // shop update false positive
+//				if (true) { // for testing
+				if (!links.eq(0).attr("abs:href").equals(this.staleLink)) { // link has been switched/removed
+					// check for shop update false positive
+					// move this into another while loop below???
+					if (links.size() < 1) {
+						System.out.println("SHOP LINKS HAVE BEEN REMOVED. 0 LINKS FOUND.");
+						Thread.sleep(this.refreshDelay);
+						attemptNum++;
 						continue;
 					}
-					if (links.size() != this.expectedNumOfLinks) { // shop update false positive
+					if (links.size() != this.expectedNumOfLinks) { 
+						this.falseLinks.add(links);
+						this.errors.add(doc.html());
+						System.out.println("SHOP LINKS CHANGED BUT STILL NOT UPDATED. " + links.size() + " LINKS FOUND. EXPECTING " + this.expectedNumOfLinks + ".");
+						Thread.sleep(this.refreshDelay);
+						attemptNum++;
 						continue;
 					}
+					// shop update 
 					updated = true;
 					for (ChromeSBotThread bot : this.bots) {
 						bot.setLinks(links);
 					}
-					System.out.println("SHOP HAS BEEN UPDATED.");
+					System.out.println();
+					System.out.println();
+					System.out.println("Shop has been updated.");
+					System.out.println();
+					System.out.println();
 					break; // redundant
 				}
 				else {
 					try {
-						System.out.println("REFRESHING " + attemptNum + ". SHOP NOT UPDATED");
+						System.out.println("REFRESHING " + attemptNum + ". SHOP NOT UPDATED. " + links.size() + " LINKS FOUND. EXPECTING " + this.expectedNumOfLinks + ".");
 						Thread.sleep(this.refreshDelay);
 						attemptNum++;
 					} catch (Exception e) {
@@ -415,32 +346,19 @@ public class ChromeSBot {
 	
 	private void run() {
 		for (ChromeSBotThread bot : this.bots) {
+			bot.setStartTime(System.nanoTime());
 			bot.getThread().start();
 		}
 	}
 	
 	// for testing
-	private void run(long time) {
-		for (ChromeSBotThread bot : this.bots) {
-			bot.setStartTime(time);
-			bot.getThread().start();
-		}
-	}
-	
-	// for testing
-	private List<Double> getBotTimes() {
-		List<Double> times = new ArrayList<Double>();
-		for (ChromeSBotThread bot : this.bots) {
-			times.add(bot.getTime());
-		}
-		return times;
-	}
-	
-	private void startAllBots() {
-		for (ChromeSBotThread bot : this.bots) {
-			bot.start();
-		}
-	}
+//	private List<Double> getBotTimes() {
+//		List<Double> times = new ArrayList<Double>();
+//		for (ChromeSBotThread bot : this.bots) {
+//			times.add(bot.getElapsedTime());
+//		}
+//		return times;
+//	}
 	
 	// move these to a utils?
 	public static void debugPrint(String string) {
@@ -449,5 +367,11 @@ public class ChromeSBot {
 	
 	public static void debugPrint(int num) {
 		System.out.println("-- " + num + " --");
+	}
+	
+	public static void printLinkHrefs(List<Element> links) {
+		for (Element link : links) {
+			System.out.println(link.attr("abs:href"));
+		}
 	}
 }
