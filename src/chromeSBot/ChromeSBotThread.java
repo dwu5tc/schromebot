@@ -1,7 +1,6 @@
 package chromeSBot;
 
 import java.io.BufferedReader;
-//import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -32,6 +31,7 @@ public class ChromeSBotThread implements Runnable
 	private Elements links;
 	
 	private double time;
+	private double startTime;
 	
 	// set delay time between cart attempts, 
 	// chrome profile to automate, 
@@ -72,6 +72,11 @@ public class ChromeSBotThread implements Runnable
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	// for testing
+	public void setStartTime(long time) {
+		this.startTime = time;
 	}
 	
 	public void setThreadName(String name) {
@@ -287,14 +292,29 @@ public class ChromeSBotThread implements Runnable
 	
 	public void test() {
 		long startTime = System.nanoTime();
-		this.cartItems();
-		this.checkout();
+//		this.cartItems();
+//		this.checkout();
+		try {
+			this.driver.get("https://www.facebook.com");
+			this.newTab();
+			this.driver.get("https://www.instagram.com");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
 		long endTime = System.nanoTime();
 		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
-
+		this.time = elapsedTime;
+		
+		try {
+			this.driver.quit();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 		System.out.print(this.thread.getName() + " ");;
 		System.out.println(elapsedTime + " seconds.");
+		
 	}
 	
 //	public void run() {
@@ -335,6 +355,7 @@ public class ChromeSBotThread implements Runnable
 //	}
 	
 	public void run() {
+//		this.startTime = System.nanoTime();
 		System.out.println(this.thread + " has been created.");
 //		while (this.start != true) {
 //			try {
@@ -343,8 +364,7 @@ public class ChromeSBotThread implements Runnable
 //				// handle
 //			}
 //		}
-		System.out.println(this.thread + " running now...");
-		long startTime = System.nanoTime();
+//		System.out.println(this.thread + " running now...");
 		try {
 			this.driver.get("https://www.facebook.com");
 			this.newTab();
@@ -353,7 +373,7 @@ public class ChromeSBotThread implements Runnable
 			e.printStackTrace();
 		}
 		long endTime = System.nanoTime();
-		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
+		double elapsedTime = (double)(endTime - this.startTime)/1000000000.00;
 		this.time = elapsedTime;
 		
 		try {

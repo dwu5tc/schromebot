@@ -4,12 +4,12 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-
-import javax.print.attribute.DocAttributeSet;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -67,87 +67,154 @@ public class ChromeSBot {
 	
 	public static void main(String[] args) {
 		
-		Scanner reader = new Scanner(System.in);
-		
 		for (String arg : args) {
 			debugPrint("arg: " + arg);
 		}
 		
+		Scanner reader = new Scanner(System.in);
+		
+		
 		ChromeSBot chromeSBot;
 		
-		// for testing
-		List<Double> times = new ArrayList<Double>();
-		for (int i = 0; i <= 10; i++) {
-			String[] testArgs = {"test"};
+		List<Double> seqtimes = new ArrayList<Double>();
+		List<Double> multitimes = new ArrayList<Double>();
+		List<Double> pooltimes = new ArrayList<Double>();
+		
+		// sequential testing (5 x 5 sequential)
+//		debugPrint("starting sequential tests");
+//		for (int i = 0; i <= 5; i++) {
+//			String[] testArgs = {"test", "1"};
+//			chromeSBot = new ChromeSBot(testArgs);
+//			chromeSBot.test();
+//			for (double time : chromeSBot.getBotTimes()) {
+//				seqtimes.add(time);
+//			}
+//		}
+		ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
+		// pool testing (20 x 4 pool)
+		debugPrint("starting pool tests");
+		for (int i = 0; i <= 6; i++) {
+			
+			String[] testArgs = {"test", "2"};
 			chromeSBot = new ChromeSBot(testArgs);
-			chromeSBot.run();
+			for (ChromeSBotThread bot : chromeSBot.bots) {
+				bot.setStartTime(System.nanoTime());
+				executor.execute(bot);
+			}
+			
+			try { 
+				Thread.sleep(6000);
+				for (double time : chromeSBot.getBotTimes()) {
+					pooltimes.add(time);
+				}
+				Thread.sleep(1000);
+			}
+			catch (Exception e) { }
+		}
+		executor.shutdown();
+		
+		
+
+		// multi-threaded testing ( 20 x 4 parallel)
+		debugPrint("starting multi tests");
+		for (int i = 0; i <= 6; i++) {
+			String[] testArgs = {"test", "2"};
+			chromeSBot = new ChromeSBot(testArgs);
+			long startTime = System.nanoTime();
+			chromeSBot.run(startTime); // begin running threads
+			try {
+				Thread.sleep(1500);
+				System.out.println("2000 SECONDS HAVE PASSED. STARTING ALL BOTS");
+				chromeSBot.startAllBots(); // threads
+			} catch (Exception e){
+				
+			}
 			try {
 				Thread.sleep(6000);
 				for (double time : chromeSBot.getBotTimes()) {
-					times.add(time);
+					multitimes.add(time);
 				}
 			} catch (Exception e) {
 				// handle
 			}
 		}
-		for (double time : times) {
+		
+		double sum = 0.00;
+		System.out.println("sequential");
+		for (double time : seqtimes) {
 			System.out.println(time);
+			sum += time;
 		}
+		System.out.println("average for sequential: " + (sum / seqtimes.size()));
 		
-		if (args.length < 1) { // just for testing in eclipse
-			String[] testArgs = {"test"};
-			chromeSBot = new ChromeSBot(testArgs);
-		} else {
-			chromeSBot = new ChromeSBot(args);
+		sum = 0.00;
+		System.out.println("multi");
+		for (double time : multitimes) {
+			System.out.println(time);
+			sum += time;
 		}
+		System.out.println("average for multi: " + (sum / multitimes.size()));
 		
-		chromeSBot.toString();
+		sum = 0.00;
+		System.out.println("pool");
+		for (double time : pooltimes) {
+			System.out.println(time);
+			sum += time;
+		}
+		System.out.println("average for pool: " + (sum / pooltimes.size()));
 		
-		if (chromeSBot.isReal) {
-			chromeSBot.grabStaleLink();
-			
-			System.out.println("Enter an INTEGER to set the delay time between page refreshes (in ms). 300-800 recommended.");
-			System.out.println("Enter 0 to test sequential.");
-			System.out.println("Enter -1 to test multi-threaded.");
-			int delay = 500; // default refresh delay
-			delay = reader.nextInt();
-			chromeSBot.setRefreshDelay(delay);	
-			
-			if (chromeSBot.refreshDelay > 0) { 
-				System.out.println("Will refresh every " + delay + "ms.");
-				System.out.println("Enter the expected number of new items to begin running bots.");
-				int num = reader.nextInt();
-				chromeSBot.setExpecetedNumOfLinks(num);
-				
-				chromeSBot.refreshAndGrabLinks();
-				chromeSBot.run();
-			} else if (chromeSBot.refreshDelay == 0) {
-				chromeSBot.grabLinks();
-				chromeSBot.test();
-			} else if (chromeSBot.refreshDelay == -1) {
-				chromeSBot.grabLinks();
-				chromeSBot.run();
-			} else {
-				
-			}
-		} else {
-			chromeSBot.grabLinks();
-			System.out.println("Enter POSITIVE INTEGER to test multi-threaded.");
-			System.out.println("Enter NEGATIVE INTEGER to test sequential.");
-			if (reader.nextInt() > 0) {
-				chromeSBot.run();
-//				System.out.println("Threads have been created.");
-//				System.out.println("Enter POSITIVE INTEGER to begin running bots.");
-//				if (reader.nextInt() > 0) {
-//					System.out.println("Running now...");
-//					chromeSBot.startAllBots();
-//				}
-			} else {
-				chromeSBot.test();
-			}
-		}		
-	
-		reader.close();
+//		if (args.length < 1) { // just for testing in eclipse
+//			String[] testArgs = {"test"};
+//			chromeSBot = new ChromeSBot(testArgs);
+//		} else {
+//			chromeSBot = new ChromeSBot(args);
+//		}
+//		
+//		
+//		if (chromeSBot.isReal) {
+//			chromeSBot.grabStaleLink();
+//			
+//			System.out.println("Enter an INTEGER to set the delay time between page refreshes (in ms). 300-800 recommended.");
+//			System.out.println("Enter 0 to test sequential.");
+//			System.out.println("Enter -1 to test multi-threaded.");
+//			int delay = 500; // default refresh delay
+//			delay = reader.nextInt();
+//			chromeSBot.setRefreshDelay(delay);	
+//			
+//			if (chromeSBot.refreshDelay > 0) { 
+//				System.out.println("Will refresh every " + delay + "ms.");
+//				System.out.println("Enter the expected number of new items to begin running bots.");
+//				int num = reader.nextInt();
+//				chromeSBot.setExpecetedNumOfLinks(num);
+//				
+//				chromeSBot.refreshAndGrabLinks();
+//				chromeSBot.run();
+//			} else if (chromeSBot.refreshDelay == 0) {
+//				chromeSBot.grabLinks();
+//				chromeSBot.test();
+//			} else if (chromeSBot.refreshDelay == -1) {
+//				chromeSBot.grabLinks();
+//				chromeSBot.run();
+//			} else {
+//				
+//			}
+//		} else {
+//			chromeSBot.grabLinks();
+//			System.out.println("Enter POSITIVE INTEGER to test multi-threaded.");
+//			System.out.println("Enter NEGATIVE INTEGER to test sequential.");
+//			if (reader.nextInt() > 0) {
+//				chromeSBot.run();
+////				System.out.println("Threads have been created.");
+////				System.out.println("Enter POSITIVE INTEGER to begin running bots.");
+////				if (reader.nextInt() > 0) {
+////					System.out.println("Running now...");
+////					chromeSBot.startAllBots();
+////				}
+//			} else {
+//				chromeSBot.test();
+//			}
+//		}
+//		reader.close();
 	}
 	
 	// set boolean for test or real,
@@ -353,6 +420,14 @@ public class ChromeSBot {
 	}
 	
 	// for testing
+	private void run(long time) {
+		for (ChromeSBotThread bot : this.bots) {
+			bot.setStartTime(time);
+			bot.getThread().start();
+		}
+	}
+	
+	// for testing
 	private List<Double> getBotTimes() {
 		List<Double> times = new ArrayList<Double>();
 		for (ChromeSBotThread bot : this.bots) {
@@ -374,34 +449,5 @@ public class ChromeSBot {
 	
 	public static void debugPrint(int num) {
 		System.out.println("-- " + num + " --");
-	}
-	
-	public String toString() {
-	  StringBuilder result = new StringBuilder();
-	  String newLine = System.getProperty("line.separator");
-
-	  result.append( this.getClass().getName() );
-	  result.append( " Object {" );
-	  result.append(newLine);
-
-	  //determine fields declared in this class only (no fields of superclass)
-	  Field[] fields = this.getClass().getDeclaredFields();
-
-	  //print field names paired with their values
-	  for ( Field field : fields  ) {
-	    result.append("  ");
-	    try {
-	      result.append( field.getName() );
-	      result.append(": ");
-	      //requires access to private field:
-	      result.append( field.get(this) );
-	    } catch ( IllegalAccessException ex ) {
-	      System.out.println(ex);
-	    }
-	    result.append(newLine);
-	  }
-	  result.append("}");
-
-	  return result.toString();
 	}
 }
