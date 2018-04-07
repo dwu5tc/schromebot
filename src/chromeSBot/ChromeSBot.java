@@ -94,6 +94,7 @@ public class ChromeSBot {
 				chromeSBot.expectedNumOfLinks = num;
 				
 				chromeSBot.refreshAndGrabLinks();
+//				chromeSBot.grabLinks();
 				chromeSBot.run();
 				for (List<Element> links : chromeSBot.falseLinks) {
 					printLinkHrefs(links);

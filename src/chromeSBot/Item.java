@@ -2,7 +2,7 @@ package chromeSBot;
 
 public class Item {
 	
-	private int number = -1;
+	private int number;
 	private String size;
 	private String url;
 	
@@ -20,13 +20,13 @@ public class Item {
 	
 	public String getUrl() { return this.url; }
 	
-	public void printItem() {
-		System.out.println("Number: " + this.number);
-		System.out.println("Size: " + this.size);
+	public boolean isValid() {
+		return this.number > 0;
 	}
 	
-	public boolean isValid() {
-		return !(this.number == -1);
+	public static void main(String[] args) {
+		Item item = new Item();
+		System.out.println(item.isValid());
 	}
 }
 

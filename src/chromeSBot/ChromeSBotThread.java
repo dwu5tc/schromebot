@@ -7,6 +7,8 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
@@ -24,9 +26,11 @@ public class ChromeSBotThread implements Runnable
 	private WebDriver driver;
 	
 	private int cartDelay;
-	private String orderPath;
+//	private String orderPath;
+	private String configPath; // json with order and cc info
 	
 	private List<Item> order = new ArrayList<Item>();
+	private Card card;
 	private Elements links;
 	
 	private double startTime;
@@ -35,10 +39,11 @@ public class ChromeSBotThread implements Runnable
 	// set delay time between cart attempts, 
 	// chrome profile to automate, 
 	// path for order construction
-	public ChromeSBotThread(int cartDelay, String profile, String orderPath) {
-		this.thread = new Thread(this, "[" + cartDelay + " " + profile + " " + orderPath + "]");
+	public ChromeSBotThread(int cartDelay, String profile, String configPath) {
+		this.thread = new Thread(this, "[" + cartDelay + " " + profile + " " + configPath + "]");
 		this.cartDelay = cartDelay;
-		this.orderPath = orderPath;
+//		this.orderPath = orderPath;
+		this.configPath = configPath;
 		this.startTime = System.nanoTime();
 		System.setProperty("webdriver.chrome.driver", "chromedriver"); // chromedriver.exe for windows
 		ChromeOptions options = new ChromeOptions();
@@ -46,7 +51,7 @@ public class ChromeSBotThread implements Runnable
 		options.addArguments("disable-infobars");
 		this.driver = new ChromeDriver(options);
 		try {
-			System.out.println("Building order: " + this.orderPath);
+			System.out.println("Building order: " + this.configPath);
 			this.buildOrderFromFile();
 			this.confirmOrder();
 		} catch (Exception e) {
@@ -57,7 +62,8 @@ public class ChromeSBotThread implements Runnable
 	// for testing (no profile used)
 	public ChromeSBotThread() {
 		this.thread = new Thread(this);
-		this.orderPath = "test.txt";
+//		this.orderPath = "test.txt";
+		this.configPath = "config.txt";
 		this.cartDelay = 200;
 		this.startTime = System.nanoTime();
 		System.setProperty("webdriver.chrome.driver", "chromedriver"); // chromedriver.exe for windows
@@ -65,7 +71,7 @@ public class ChromeSBotThread implements Runnable
 		options.addArguments("disable-infobars");
 		this.driver = new ChromeDriver(options);
 		try {
-			System.out.println("Building order: " + this.orderPath);
+			System.out.println("Building order: " + this.configPath);
 			this.buildOrderFromFile();
 			this.confirmOrder();
 		} catch (Exception e) {
@@ -107,7 +113,7 @@ public class ChromeSBotThread implements Runnable
 	}
 	
 	// read .txt file from specified path and build order
-	public void buildOrderFromFile() throws IOException {
+	public void buildOrderFromTxt() throws IOException {
 		FileInputStream fis = new FileInputStream(this.orderPath);
 		BufferedReader br = new BufferedReader(new InputStreamReader(fis)); // construct bufferedreader from inputstreamreader
 
@@ -147,9 +153,56 @@ public class ChromeSBotThread implements Runnable
 		}
 		br.close();
 	}
+	
+	public void buildOrderFromFile() throws IOException {
+		String extension = null;
 
-	// buildOrder but from site
-	public void buildOrderWeb(String path) throws IOException {
+		int i = this.orderPath.lastIndexOf('.');
+		if (i > 0) {
+		    extension = this.orderPath.substring(i + 1);
+		}
+		if (extension.equals("txt")) {
+			this.buildOrderFromTxt();
+		} else if (extension.equals("json")) {
+			this.buildOrderFromJson();
+		}
+	}
+	
+	public String getJsonFromFile() throws IOException {
+		FileInputStream fis = new FileInputStream(this.orderPath);
+		BufferedReader br = new BufferedReader(new InputStreamReader(fis)); // construct bufferedreader from inputstreamreader
+		
+		
+		return jsonString;
+	}
+	
+	// build order from JSONArray
+	public void buildOrderFromJson(JSONArray jsonArr) {
+		for (int i = 0; i < jsonArr.length(); i++) {
+			JSONObject jsonItem = jsonArr.getJSONObject(i);
+			Item item = new Item();
+			if (!jsonItem.isNull("size")) {
+				item.setSize(jsonItem.getString("size"));
+			}
+			if (!jsonItem.isNull("number") && jsonItem.getInt("number") > 0) {
+				item.setNumber(jsonItem.getInt("number"));
+				this.order.add(item);
+			}
+		}
+	}
+	
+	// build card from JSONObject
+	public void buildCardFromJson(JSONObject obj) {
+		if (!obj.isNull("number") && !obj.isNull("month") && !obj.isNull("year") && !obj.isNull("cvv")) {
+			this.card.setNumber(obj.getString("number"));
+			this.card.setMonth(obj.getString("month"));
+			this.card.setYear(obj.getString("year"));
+			this.card.setCvv(obj.getString("cvv"));
+		}
+	}
+
+	// 
+	public void getJsonFromWeb(String path) throws IOException {
 		return;
 	}
 	
