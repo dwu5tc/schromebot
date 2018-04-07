@@ -24,4 +24,8 @@ public class Card {
 	public String getYear() { return this.year; }
 	
 	public String getCvv() { return this.cvv; }
+	
+	public static void main(String[] args) {
+		
+	}
 }

@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,6 +20,7 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.Select;
+
 import org.openqa.selenium.JavascriptExecutor;
 
 public class ChromeSBotThread implements Runnable
@@ -51,9 +54,10 @@ public class ChromeSBotThread implements Runnable
 		options.addArguments("disable-infobars");
 		this.driver = new ChromeDriver(options);
 		try {
-			System.out.println("Building order: " + this.configPath);
-			this.buildOrderFromFile();
+			System.out.println("Configuring from: " + this.configPath);
+			this.configBot();
 			this.confirmOrder();
+			this.confirmCard();
 		} catch (Exception e) {
 			// handle!!!
 		}
@@ -71,9 +75,10 @@ public class ChromeSBotThread implements Runnable
 		options.addArguments("disable-infobars");
 		this.driver = new ChromeDriver(options);
 		try {
-			System.out.println("Building order: " + this.configPath);
-			this.buildOrderFromFile();
+			System.out.println("Configuriing from: " + this.configPath);
+			this.configBot();
 			this.confirmOrder();
+			this.confirmCard();
 		} catch (Exception e) {
 			// handle!!!
 		}
@@ -92,8 +97,8 @@ public class ChromeSBotThread implements Runnable
 		this.cartDelay = delay;
 	}
 	
-	public void setOrderPath(String path) {
-		this.orderPath = path;
+	public void setConfigPath(String path) {
+		this.configPath = path;
 	}
 	
 	public void setOrder(List<Item> order) {
@@ -113,71 +118,87 @@ public class ChromeSBotThread implements Runnable
 	}
 	
 	// read .txt file from specified path and build order
-	public void buildOrderFromTxt() throws IOException {
-		FileInputStream fis = new FileInputStream(this.orderPath);
-		BufferedReader br = new BufferedReader(new InputStreamReader(fis)); // construct bufferedreader from inputstreamreader
-
-		String line = null;
-		int itemCount = 1;
-		outer:
-		while ((line = br.readLine()) != null) {
-			line = line.trim();
-			Item item = new Item();
-			while (!line.equals("-")) { // inner
-				String[] params = line.split(":");
-				if (params.length > 1) {
-					params[0] = params[0].trim().toLowerCase();
-					params[1] = params[1].trim();
-					setField(item, params);
-				} else {
-					System.out.println("NO VALUE FOR " + params[0] + " FIELD***");
-				}
-				if ((line = br.readLine()) != null) {
-					line.trim(); // to match trim call of outer???
-					continue;
-				} else { 
-					break outer;	
-				}
-			}
-			if (item.isValid()) {
-//				System.out.println("Item " + itemCount + " is valid. Appended to order.");
-				this.order.add(item);
-				itemCount++;
-			} else {
-				System.out.println("ITEM " + itemCount + " IS NOT VALID. IGNORED.***");
-				itemCount++;
-			}
-		}
-		if (this.order.size() > 0) {
-			System.out.println("Order successfully built.");
-		}
-		br.close();
-	}
+//	public void buildOrderFromTxt() throws IOException {
+//		FileInputStream fis = new FileInputStream(this.orderPath);
+//		BufferedReader br = new BufferedReader(new InputStreamReader(fis)); // construct bufferedreader from inputstreamreader
+//
+//		String line = null;
+//		int itemCount = 1;
+//		outer:
+//		while ((line = br.readLine()) != null) {
+//			line = line.trim();
+//			Item item = new Item();
+//			while (!line.equals("-")) { // inner
+//				String[] params = line.split(":");
+//				if (params.length > 1) {
+//					params[0] = params[0].trim().toLowerCase();
+//					params[1] = params[1].trim();
+//					setField(item, params);
+//				} else {
+//					System.out.println("NO VALUE FOR " + params[0] + " FIELD***");
+//				}
+//				if ((line = br.readLine()) != null) {
+//					line.trim(); // to match trim call of outer???
+//					continue;
+//				} else { 
+//					break outer;	
+//				}
+//			}
+//			if (item.isValid()) {
+////				System.out.println("Item " + itemCount + " is valid. Appended to order.");
+//				this.order.add(item);
+//				itemCount++;
+//			} else {
+//				System.out.println("ITEM " + itemCount + " IS NOT VALID. IGNORED.***");
+//				itemCount++;
+//			}
+//		}
+//		if (this.order.size() > 0) {
+//			System.out.println("Order successfully built.");
+//		}
+//		br.close();
+//	}
 	
-	public void buildOrderFromFile() throws IOException {
+	public void configBot() {
 		String extension = null;
-
-		int i = this.orderPath.lastIndexOf('.');
+		String json = null;
+		
+		int i = this.configPath.lastIndexOf(".");
 		if (i > 0) {
-		    extension = this.orderPath.substring(i + 1);
+		    extension = this.configPath.substring(i + 1);
 		}
-		if (extension.equals("txt")) {
-			this.buildOrderFromTxt();
-		} else if (extension.equals("json")) {
-			this.buildOrderFromJson();
+		if (extension.equals("json")) {
+			json = this.fetchJsonFromFile();
+		} else {
+			json = this.fetchJsonFromWeb();
+		}
+		JSONObject obj = new JSONObject(json);
+		if (!obj.isNull("order")) {
+			JSONArray jsonArrOrder = obj.getJSONArray("order");
+			this.buildOrderFromJson(jsonArrOrder);
+		}
+		if (!obj.isNull("card")) {
+			JSONObject jsonObjCard = obj.getJSONObject("card");
+			this.buildCardFromJson(jsonObjCard);
 		}
 	}
 	
-	public String getJsonFromFile() throws IOException {
-		FileInputStream fis = new FileInputStream(this.orderPath);
-		BufferedReader br = new BufferedReader(new InputStreamReader(fis)); // construct bufferedreader from inputstreamreader
-		
-		
-		return jsonString;
+	public String fetchJsonFromFile() throws IOException {
+	    String content = "";
+	    try {
+	        content = new String(Files.readAllBytes(Paths.get(this.configPath)));
+	    } catch (IOException e) {
+	        // handle
+	    }
+	    return content;
+	}
+	
+	public void fetchJsonFromWeb() {
+		return;
 	}
 	
 	// build order from JSONArray
-	public void buildOrderFromJson(JSONArray jsonArr) {
+	private void buildOrderFromJson(JSONArray jsonArr) {
 		for (int i = 0; i < jsonArr.length(); i++) {
 			JSONObject jsonItem = jsonArr.getJSONObject(i);
 			Item item = new Item();
@@ -186,13 +207,16 @@ public class ChromeSBotThread implements Runnable
 			}
 			if (!jsonItem.isNull("number") && jsonItem.getInt("number") > 0) {
 				item.setNumber(jsonItem.getInt("number"));
-				this.order.add(item);
+				this.order.add(item); // only add item if 
+				System.out.println("Item " + i + " is valid. Appended to order.");
+			} else {
+				System.out.println("INVALID NUMBER FIELD. ITEM " + i + " IGNORED.***");
 			}
 		}
 	}
 	
 	// build card from JSONObject
-	public void buildCardFromJson(JSONObject obj) {
+	private void buildCardFromJson(JSONObject obj) {
 		if (!obj.isNull("number") && !obj.isNull("month") && !obj.isNull("year") && !obj.isNull("cvv")) {
 			this.card.setNumber(obj.getString("number"));
 			this.card.setMonth(obj.getString("month"));
@@ -201,44 +225,44 @@ public class ChromeSBotThread implements Runnable
 		}
 	}
 
-	// 
-	public void getJsonFromWeb(String path) throws IOException {
-		return;
-	}
-	
 	// set the number and size fields of each item to be added to the order
 	// parts[0] should be the key and parts[1] should be the value
-	private static void setField(Item item, String[] parts) {
-		switch (parts[0]) {
-			case "number":
-				if (parts[1].matches("\\d+")) { // regex match for digits 
-					item.setNumber(Integer.parseInt(parts[1]));
-//					System.out.println("Set " + parts[0] + " field --> " + parts[1]);
-				}
-				else {
-					System.out.println("NUMBER FIELD IS NOT A NUMBER.***");
-				}
-				break;
-			case "size":
-				// check proper input (like regex match for number)!!!
-				item.setSize(parts[1]);
-//				System.out.println("Set " + parts[0] + " field --> " + parts[1]);
-				break;
-			default:
-				System.out.println("FIELD NEITHER NUMBER NOR SIZE. [" + parts[0] + ", " + parts[1] + "]***");
-		}
-	}
+//	private static void setField(Item item, String[] parts) {
+//		switch (parts[0]) {
+//			case "number":
+//				if (parts[1].matches("\\d+")) { // regex match for digits 
+//					item.setNumber(Integer.parseInt(parts[1]));
+////					System.out.println("Set " + parts[0] + " field --> " + parts[1]);
+//				}
+//				else {
+//					System.out.println("NUMBER FIELD IS NOT A NUMBER.***");
+//				}
+//				break;
+//			case "size":
+//				// check proper input (like regex match for number)!!!
+//				item.setSize(parts[1]);
+////				System.out.println("Set " + parts[0] + " field --> " + parts[1]);
+//				break;
+//			default:
+//				System.out.println("FIELD NEITHER NUMBER NOR SIZE. [" + parts[0] + ", " + parts[1] + "]***");
+//		}
+//	}
 
 	// prints out each order item for user to confirm
 	public void confirmOrder() {
 		int itemCount = 1;
 		for (Item item : this.order) {
-			System.out.print(this.thread.getName() + " ");;
+			System.out.print(this.thread.getName() + " ");
 			System.out.println(itemCount + ". " + item.getNumber() + " - " + item.getSize());
 //			System.out.println("----- Item " + itemCount + " -----");
 //			item.printItem();
 			itemCount++;
 		}
+	}
+	
+	public void confirmCard() {
+		System.out.print(this.thread.getName() + "");
+		System.out.println(this.card.getNumber() + " - " + this.card.getMonth() + "/" + this.card.getYear() + " - " + this.card.getCvv());
 	}
 
 	// iterates through each item and calls addToCart on each
@@ -325,16 +349,84 @@ public class ChromeSBotThread implements Runnable
 	}
 
 	// navigate to checkout page
-	public void checkout() {
+	private void checkout() {
 		try { 
 			Thread.sleep(this.cartDelay); 
 			this.newTab();
 			System.out.print(this.thread.getName() + " ");;
 			System.out.println("Navigating to checkout...");
 			this.driver.get("http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/chec" + "kout");
+			Elements paymentElements = null;
+			try {
+				this.sendPaymentDetails(paymentElements);
+				this.checkTerms();
+				this.clickProcessPayment();
+			} catch (exception E) {
+				
+			}
+			
 		} catch (Exception e) { 
 			// handle!!! 
 		} 
+	}
+	
+	private void sendPaymentDetails(Elements paymentElements) {
+		this.sendKeyWithFallback();
+		this.selectWithFallback();
+		this.selectWithFallback();
+		this.sendKeyWithFallback();
+	}
+	
+	private void sendKeyWithFallback(String id, String path, Element element, String keys) {
+		try {
+			
+		} catch (Exception e) {
+			try {
+				
+			} catch (Exception e2) {
+				try {
+					
+				} catch (Exception e3) {
+					
+				}
+			}
+		}
+	}
+	
+	private void selectWithFallback(String id, String path, Element element, String target) {
+		
+	}
+	
+	private void checkTerms() {
+		try {
+			
+		} catch (Exception e) {
+			try {
+				
+			} catch (Exception e2) {
+				try {
+					
+				} catch (Exception e3) {
+					
+				}
+			}
+		}
+	}
+	
+	private void clickProcessPayment() {
+		try {
+			
+		} catch (Exception e) {
+			try {
+				
+			} catch (Exception e2) {
+				try {
+					
+				} catch (Exception e3) {
+					
+				}
+			}
+		}
 	}
 	
 	public void test() {
