@@ -1,4 +1,4 @@
-package chromeSBot;
+package chrome_sbot;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -23,66 +23,69 @@ import org.openqa.selenium.support.ui.Select;
 
 import org.openqa.selenium.JavascriptExecutor;
 
-public class ChromeSBotThread implements Runnable
+public class ChromeSBot implements Runnable
 {
 	private Thread thread;
 	private WebDriver driver;
 	
 	private int cartDelay;
-//	private String orderPath;
-	private String configPath; // json with order and cc info
+	private int checkoutDelay;
+//	private String profile; // not necessary
 	
 	private List<Item> order = new ArrayList<Item>();
 	private Card card;
+	
 	private Elements links;
 	
-	private double startTime;
+	private double startTime = System.nanoTime(); // or should it be null?
 	private double elapsedTime;
+	
+	public ChromeSBot(int cartDelay, int checkoutDelay, String profile, JSONArray order, JSONObject card) {
+		this.thread = new Thread(this, "[" + cartDelay + " " + checkoutDelay + " " + profile + "]");
+		this.cartDelay = cartDelay;
+		this.checkoutDelay = checkoutDelay;
+		this.openChrome(profile);
+		this.buildOrderFromJson(order);
+		this.buildCardFromJson(card);
+		this.confirmOrder();
+		this.confirmCard();
+	}
 	
 	// set delay time between cart attempts, 
 	// chrome profile to automate, 
 	// path for order construction
-	public ChromeSBotThread(int cartDelay, String profile, String configPath) {
-		this.thread = new Thread(this, "[" + cartDelay + " " + profile + " " + configPath + "]");
-		this.cartDelay = cartDelay;
-//		this.orderPath = orderPath;
-		this.configPath = configPath;
-		this.startTime = System.nanoTime();
-		System.setProperty("webdriver.chrome.driver", "chromedriver"); // chromedriver.exe for windows
-		ChromeOptions options = new ChromeOptions();
-		options.addArguments("user-data-dir=" + profile);
-		options.addArguments("disable-infobars");
-		this.driver = new ChromeDriver(options);
-		try {
-			System.out.println("Configuring from: " + this.configPath);
-			this.configBot();
-			this.confirmOrder();
-			this.confirmCard();
-		} catch (Exception e) {
-			// handle!!!
-		}
-	}
+//	public ChromeSBot(int cartDelay, String profile, String configPath) {
+//		this.thread = new Thread(this, "[" + cartDelay + " " + profile + " " + configPath + "]");
+//		this.cartDelay = cartDelay;
+////		this.orderPath = orderPath;
+//		this.configPath = configPath;
+//		this.openChrome(profile);
+//		try {
+//			System.out.println("Configuring from: " + this.configPath);
+//			this.configBot();
+//			this.confirmOrder();
+//			this.confirmCard();
+//		} catch (Exception e) {
+//			// handle!!!
+//		}
+//	}
 	
 	// for testing (no profile used)
-	public ChromeSBotThread() {
-		this.thread = new Thread(this);
-//		this.orderPath = "test.txt";
-		this.configPath = "config.txt";
-		this.cartDelay = 200;
-		this.startTime = System.nanoTime();
-		System.setProperty("webdriver.chrome.driver", "chromedriver"); // chromedriver.exe for windows
-		ChromeOptions options = new ChromeOptions();
-		options.addArguments("disable-infobars");
-		this.driver = new ChromeDriver(options);
-		try {
-			System.out.println("Configuriing from: " + this.configPath);
-			this.configBot();
-			this.confirmOrder();
-			this.confirmCard();
-		} catch (Exception e) {
-			// handle!!!
-		}
-	}
+//	public ChromeSBot() {
+//		this.thread = new Thread(this);
+////		this.orderPath = "test.txt";
+//		this.configPath = "config.txt";
+//		this.cartDelay = 200;
+//		this.openChrome("test");
+//		try {
+//			System.out.println("Configuring from: " + this.configPath);
+//			this.configBot();
+//			this.confirmOrder();
+//			this.confirmCard();
+//		} catch (Exception e) {
+//			// handle!!!
+//		}
+//	}
 	
 	public void setStartTime(long time) {
 		this.startTime = time;
@@ -115,6 +118,22 @@ public class ChromeSBotThread implements Runnable
 	
 	public double getElapsedTime() {
 		return this.elapsedTime;
+	}
+	
+	private void openChrome(String profile) {
+		String os = System.getProperty("os.name").toLowerCase();
+		if (os.indexOf("win") > -1) {
+			System.setProperty("webdriver.chrome.driver", "chromedriver.exe");
+		} else {
+			System.setProperty("webdriver.chrome.driver", "chromedriver");
+		}
+		
+		ChromeOptions options = new ChromeOptions();
+		if (!profile.equals("test")) {
+			options.addArguments("user-data-dir=" + profile);
+		}
+		options.addArguments("disable-infobars");
+		this.driver = new ChromeDriver(options);
 	}
 	
 	// read .txt file from specified path and build order
@@ -181,20 +200,6 @@ public class ChromeSBotThread implements Runnable
 			JSONObject jsonObjCard = obj.getJSONObject("card");
 			this.buildCardFromJson(jsonObjCard);
 		}
-	}
-	
-	public String fetchJsonFromFile() throws IOException {
-	    String content = "";
-	    try {
-	        content = new String(Files.readAllBytes(Paths.get(this.configPath)));
-	    } catch (IOException e) {
-	        // handle
-	    }
-	    return content;
-	}
-	
-	public void fetchJsonFromWeb() {
-		return;
 	}
 	
 	// build order from JSONArray

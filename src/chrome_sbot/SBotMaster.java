@@ -1,4 +1,4 @@
-package chromeSBot;
+package chrome_sbot;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -8,31 +8,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-/*	FOR TESTING
- *		/"test"[, N]
- *		- calls CSBT test constructor
- * 		- "all" shop path
- * 		- 200 cart delay, "test.txt" for the orders, no profile
- * 		- no refreshing
- *
- *		- N (optional): custom number of bots (default = 3)
- */
-
-/*	FOR REAL
- *		"real"[, "/"/"all"/"new"[, PATH]]
- *		- calls CSBT regular constructor
- * 		- prompts user for refresh delay 
- * 		
- * 		- "/"/"all"/"new" (optional): shop path (default = "new")
- * 		- PATH (optional): custom path to .txt file to configure the cart delay, order path, profile of the bots (default = "master.txt") 
- */ 
-
-public class ChromeSBot {
+public class SBotMaster {
 	// private String version = "1.0.0";
 	// multithread
 	// proxies
@@ -48,7 +31,7 @@ public class ChromeSBot {
 	
 	// handle options: regular drop (specified path), first drop (only all), already dropped (specified path), test (only all) 
 	
-	private List<ChromeSBotThread> bots = new ArrayList<ChromeSBotThread>();
+	private List<ChromeSBot> bots = new ArrayList<ChromeSBot>();
 	
 	private Boolean isReal;
 	
@@ -64,45 +47,57 @@ public class ChromeSBot {
 	private String updatedHTML;
 	
 	public static void main(String[] args) {	
-		for (String arg : args) {
-			debugPrint("arg: " + arg);
-		}
 		
 		Scanner reader = new Scanner(System.in);
-		ChromeSBot chromeSBot;
+		SBotMaster sBotMaster;
+	
+		try {
+			JSONObject master = new JSONObject(Utils.fetchJsonFromFile("master.json"));
+			String[] fields = {"refreshDelay", "shopPath", "threads"};
+			if (Utils.jsonFieldsNotNull(master, fields)) {
+				int refreshDelay = master.getInt("refreshDelay");
+				String shopPath = master.getString("shopPath");
+				JSONArray threads = master.getJSONArray("threads"); 
+				sBotMaster = new SBotMaster(refreshDelay, shopPath, threads);
+			} else {
+				Utils.debugPrint("Error reading refresh delay, shop path, and/or threads from master.json");
+			}
+		} catch (Exception e) {
+			
+		}
 		
 		if (args.length < 1) { // just for testing in eclipse
 			String[] testArgs = {"test"};
-			chromeSBot = new ChromeSBot(testArgs);
+			sBotMaster = new SBotMaster(testArgs);
 		} else {
-			chromeSBot = new ChromeSBot(args);
+			sBotMaster = new SBotMaster(args);
 		}
 		
-		if (chromeSBot.isReal) {
-			chromeSBot.grabStaleLink();
+		if (sBotMaster.isReal) {
+			sBotMaster.grabStaleLink();
 			
 			System.out.println("Enter an INTEGER to set the delay time between page refreshes (in ms). 300-800 recommended.");
 //			System.out.println("Enter 0 to test sequential.");
 //			System.out.println("Enter -1 to test multi-threaded.");
 			int delay = reader.nextInt();
-			chromeSBot.refreshDelay = delay;
+			sBotMaster.refreshDelay = delay;
 			
-			if (chromeSBot.refreshDelay > 0) { 
-				System.out.println("Will refresh every " + chromeSBot.refreshDelay + "ms.");
+			if (sBotMaster.refreshDelay > 0) { 
+				System.out.println("Will refresh every " + sBotMaster.refreshDelay + "ms.");
 				System.out.println("Enter the expected number of new items to begin running bots.");
 				int num = reader.nextInt();
-				chromeSBot.expectedNumOfLinks = num;
+				sBotMaster.expectedNumOfLinks = num;
 				
-				chromeSBot.refreshAndGrabLinks();
+				sBotMaster.refreshAndGrabLinks();
 //				chromeSBot.grabLinks();
-				chromeSBot.run();
-				for (List<Element> links : chromeSBot.falseLinks) {
+				sBotMaster.run();
+				for (List<Element> links : sBotMaster.falseLinks) {
 					printLinkHrefs(links);
 				}
-				for (String error : chromeSBot.errors) {
+				for (String error : sBotMaster.errors) {
 					System.out.println(error);
 				}
-				System.out.println(chromeSBot.updatedHTML);
+				System.out.println(sBotMaster.updatedHTML);
 				reader.close();
 				return;
 			}
@@ -140,10 +135,10 @@ public class ChromeSBot {
 	// path to file for bot configuration
 	// implement better argument reading!!!
 	// implement factory???
-	public ChromeSBot(String[] args)
+	public SBotMaster(String[] args)
 	{	
 		if (args.length < 1 || args[0].equals("test")) {
-			debugPrint("in test");
+			Utils.debugPrint("in test");
 			this.isReal = false;
 			this.shopPath = "all";
 			int numOfTestBots = 3; // default number of test bots
@@ -153,13 +148,13 @@ public class ChromeSBot {
 			}
 			
 			for (int i = 0; i < numOfTestBots; i++) {
-				ChromeSBotThread testBot = new ChromeSBotThread();
+				ChromeSBot testBot = new ChromeSBot();
 				testBot.setThreadName("[test " + (i + 1) + "]");
 				this.bots.add(testBot);
 			}
 		}
 		else if (args[0].equals("real")) {
-			debugPrint("in real");
+			Utils.debugPrint("in real");
 			this.isReal = true;
 			String configPath = "master.txt"; // default config path
 			String shopPath = "new"; // default shop path
@@ -180,6 +175,26 @@ public class ChromeSBot {
 				this.configureBots(configPath);
 			} catch (Exception e) {
 				// error handle
+			}
+		}
+	}
+	
+	public SBotMaster() {}
+	
+	public SBotMaster(int refreshDelay, String shopPath, JSONArray threads) {
+		this.refreshDelay = refreshDelay;
+		this.shopPath = shopPath;
+		for (int i = 0; i < threads.length(); i++) {
+			JSONObject obj = new JSONObject(threads.get(i));
+			String[] fields = {"cartDelay", "checkoutDelay", "profile", "order", "card"};
+			if (Utils.jsonFieldsNotNull(obj, fields)) {
+				int cartDelay = obj.getInt("cartDelay");
+				int checkoutDelay = obj.getInt("checkoutDelay");
+				String profile = obj.getString("profile");
+				JSONArray order = obj.getJSONArray("order");
+				JSONObject card = obj.getJSONObject("card");
+				ChromeSBot bot = new ChromeSBot(cartDelay, checkoutDelay, profile, order, card);
+				this.bots.add(bot);
 			}
 		}
 	}
@@ -218,7 +233,7 @@ public class ChromeSBot {
 			line = line.trim();
 			String[] args = line.split(" ");
 			if (args.length == 3) {
-				ChromeSBotThread bot = new ChromeSBotThread(Integer.parseInt(args[0]), args[1], args[2]); // cartDelay, profile, orderPath
+				ChromeSBot bot = new ChromeSBot(Integer.parseInt(args[0]), args[1], args[2]); // cartDelay, profile, orderPath
 				this.bots.add(bot);
 			} else {
 				// error handle...
@@ -294,7 +309,7 @@ public class ChromeSBot {
 					// shop update 
 					updated = true;
 					this.updatedHTML = doc.html();
-					for (ChromeSBotThread bot : this.bots) {
+					for (ChromeSBot bot : this.bots) {
 						bot.setLinks(links);
 					}
 					System.out.println();
@@ -323,25 +338,25 @@ public class ChromeSBot {
 	private void grabLinks() {
 		String target = "http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/sh" + "op/" + this.shopPath;
 		String linksContainer;
-		debugPrint(target);
+		Utils.debugPrint(target);
 		if (this.shopPath.equals("new") || this.shopPath.equals("all")) {
-			debugPrint("path is " + this.shopPath);
+			Utils.debugPrint("path is " + this.shopPath);
 			linksContainer = "div.turbolink_scroller a";
 			
 		}
 		else {
-			debugPrint("path is null");
+			Utils.debugPrint("path is null");
 			linksContainer = "div.shop a";
 		}
 		try {
 			Document doc = Jsoup.connect(target).get();
-//			debugPrint(doc.html());
+//			Utils.debugPrint(doc.html());
 			Elements links = doc.select(linksContainer);
-//			debugPrint(links.size());
+//			Utils.debugPrint(links.size());
 //			for (Element link : links) {
 //				System.out.println(link.attr("abs:href"));
 //			}
-			for (ChromeSBotThread bot : this.bots) {
+			for (ChromeSBot bot : this.bots) {
 				bot.setLinks(links);
 			}
 			System.out.println("Shop has been updated!");
@@ -351,15 +366,21 @@ public class ChromeSBot {
 	}
 	
 	private void test() { // serial testing
-		for (ChromeSBotThread bot : this.bots) {
+		for (ChromeSBot bot : this.bots) {
 			bot.test();
 		}
 	}
 	
 	private void run() {
-		for (ChromeSBotThread bot : this.bots) {
+		for (ChromeSBot bot : this.bots) {
 			bot.setStartTime(System.nanoTime());
 			bot.getThread().start();
+		}
+	}
+	
+	public static void printLinkHrefs(List<Element> links) {
+		for (Element link : links) {
+			System.out.println(link.attr("abs:href"));
 		}
 	}
 	
@@ -372,18 +393,5 @@ public class ChromeSBot {
 //		return times;
 //	}
 	
-	// move these to a utils?
-	public static void debugPrint(String string) {
-		System.out.println("-- " + string + " --");
-	}
-	
-	public static void debugPrint(int num) {
-		System.out.println("-- " + num + " --");
-	}
-	
-	public static void printLinkHrefs(List<Element> links) {
-		for (Element link : links) {
-			System.out.println(link.attr("abs:href"));
-		}
-	}
+
 }

@@ -1,4 +1,4 @@
-package chromeSBot;
+package chrome_sbot;
 
 public class Item {
 	
