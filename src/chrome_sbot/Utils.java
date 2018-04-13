@@ -14,7 +14,7 @@ public class Utils {
 	
 	public static void debugPrint(String string) {
 		System.out.println("-- " + string + " --");
-	}asd
+	}
 	
 	public static void debugPrint(int num) {
 		System.out.println("-- " + num + " --");
@@ -30,17 +30,20 @@ public class Utils {
 		return true;
 	}
 	
-	public static JSONObject fetchJsonFromFile(String path) throws Exception { // be more specific with exception
+	public static JSONObject fetchJsonObjFromFile(String path) throws Exception { // be more specific with exception
 		String json = "";
         json = new String(Files.readAllBytes(Paths.get(path)));
+//        System.out.println(json);
         JSONObject obj = new JSONObject(json);
         return obj;
 	}
 	
-	public static JSONObject fetchJsonFromWeb(String path) throws Exception { // be more specific with exception
+	public static JSONObject fetchJsonObjFromWeb(String path) throws Exception { // be more specific with exception
 		// make some http request
 		String json = "";
+//		System.out.println(json);
 		JSONObject obj = new JSONObject(json);
 		return obj;
-	} 
+	}
+	
 }
