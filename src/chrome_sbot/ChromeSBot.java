@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.json.JSONArray;
@@ -14,6 +15,7 @@ import org.json.JSONObject;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
+import org.openqa.selenium.Proxy;
 //import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -29,63 +31,49 @@ public class ChromeSBot implements Runnable
 	private WebDriver driver;
 	
 	private int cartDelay;
+	private String profile;
+	private String proxy;
+	private boolean blockImages = false;
+	
 	private int checkoutDelay;
-//	private String profile; // not necessary
+	private boolean autoCheckTerms = false;
+	private boolean autoProcessPayment = false;
 	
 	private List<Item> order = new ArrayList<Item>();
-	private Card card;
+	private Card card = new Card();
 	
 	private Elements links;
 	
-	private double startTime = System.nanoTime(); // or should it be null?
-	private double elapsedTime;
+	private double startTime; // or should it be null?
+//	private double atcTime;
+//	private double checkoutTime;
 	
 	public ChromeSBot(int cartDelay, int checkoutDelay, String profile, JSONArray order, JSONObject card) {
 		this.thread = new Thread(this, "[" + cartDelay + " " + checkoutDelay + " " + profile + "]");
 		this.cartDelay = cartDelay;
 		this.checkoutDelay = checkoutDelay;
-		this.openChrome(profile);
+		this.profile = profile;
 		this.buildOrderFromJson(order);
 		this.buildCardFromJson(card);
 		this.confirmOrder();
 		this.confirmCard();
 	}
 	
-	// set delay time between cart attempts, 
-	// chrome profile to automate, 
-	// path for order construction
-//	public ChromeSBot(int cartDelay, String profile, String configPath) {
-//		this.thread = new Thread(this, "[" + cartDelay + " " + profile + " " + configPath + "]");
-//		this.cartDelay = cartDelay;
-////		this.orderPath = orderPath;
-//		this.configPath = configPath;
-//		this.openChrome(profile);
-//		try {
-//			System.out.println("Configuring from: " + this.configPath);
-//			this.configBot();
-//			this.confirmOrder();
-//			this.confirmCard();
-//		} catch (Exception e) {
-//			// handle!!!
-//		}
-//	}
+	public void setProxy(String proxy) {
+		this.proxy = proxy;
+	}
 	
-	// for testing (no profile used)
-//	public ChromeSBot() {
-//		this.thread = new Thread(this);
-////		this.orderPath = "test.txt";
-//		this.configPath = "config.txt";
-//		this.cartDelay = 200;
-//		this.openChrome("test");
-//		try {
-//			System.out.println("Configuring from: " + this.configPath);
-//			this.configBot();
-//			this.confirmOrder();
-//			this.confirmCard();
-//		} catch (Exception e) {
-//			// handle!!!
-//		}
-//	}
+	public void setBlockImages(boolean bool) {
+		this.blockImages = bool;
+	}
+	
+	public void setCheckTerms(boolean bool) {
+		this.autoCheckTerms = bool;
+	}
+	
+	public void setProcessPayment(boolean bool) {
+		this.autoProcessPayment = bool;
+	}
 	
 	public void setStartTime(long time) {
 		this.startTime = time;
@@ -100,10 +88,6 @@ public class ChromeSBot implements Runnable
 		this.cartDelay = delay;
 	}
 	
-	public void setConfigPath(String path) {
-		this.configPath = path;
-	}
-	
 	public void setOrder(List<Item> order) {
 		this.order = order;
 	}
@@ -116,142 +100,68 @@ public class ChromeSBot implements Runnable
 		return this.thread;
 	}
 	
-	public double getElapsedTime() {
-		return this.elapsedTime;
-	}
-	
-	private void openChrome(String profile) {
+	public void initChrome() {
 		String os = System.getProperty("os.name").toLowerCase();
 		if (os.indexOf("win") > -1) {
 			System.setProperty("webdriver.chrome.driver", "chromedriver.exe");
 		} else {
 			System.setProperty("webdriver.chrome.driver", "chromedriver");
-		}
+		} 
 		
 		ChromeOptions options = new ChromeOptions();
-		if (!profile.equals("test")) {
+		if (this.profile != null) {
 			options.addArguments("user-data-dir=" + profile);
+		}
+		if (this.blockImages == true) {				
+			HashMap<String, Object> images = new HashMap<String, Object>();
+			images.put("images", 2);
+			HashMap<String, Object> prefs = new HashMap<String, Object>();
+			prefs.put("profile.default_content_setting_values", images);
+			options.setExperimentalOption("prefs", prefs);
+		}
+		if (this.proxy != null) {
+			System.out.println("SETTING PROXY TO " + this.proxy);
+			Proxy proxy = new Proxy();
+			proxy.setHttpProxy(this.proxy);
+			options.setCapability("proxy", proxy);
 		}
 		options.addArguments("disable-infobars");
 		this.driver = new ChromeDriver(options);
 	}
 	
-	// read .txt file from specified path and build order
-//	public void buildOrderFromTxt() throws IOException {
-//		FileInputStream fis = new FileInputStream(this.orderPath);
-//		BufferedReader br = new BufferedReader(new InputStreamReader(fis)); // construct bufferedreader from inputstreamreader
-//
-//		String line = null;
-//		int itemCount = 1;
-//		outer:
-//		while ((line = br.readLine()) != null) {
-//			line = line.trim();
-//			Item item = new Item();
-//			while (!line.equals("-")) { // inner
-//				String[] params = line.split(":");
-//				if (params.length > 1) {
-//					params[0] = params[0].trim().toLowerCase();
-//					params[1] = params[1].trim();
-//					setField(item, params);
-//				} else {
-//					System.out.println("NO VALUE FOR " + params[0] + " FIELD***");
-//				}
-//				if ((line = br.readLine()) != null) {
-//					line.trim(); // to match trim call of outer???
-//					continue;
-//				} else { 
-//					break outer;	
-//				}
-//			}
-//			if (item.isValid()) {
-////				System.out.println("Item " + itemCount + " is valid. Appended to order.");
-//				this.order.add(item);
-//				itemCount++;
-//			} else {
-//				System.out.println("ITEM " + itemCount + " IS NOT VALID. IGNORED.***");
-//				itemCount++;
-//			}
-//		}
-//		if (this.order.size() > 0) {
-//			System.out.println("Order successfully built.");
-//		}
-//		br.close();
-//	}
-	
-	public void configBot() {
-		String extension = null;
-		String json = null;
-		
-		int i = this.configPath.lastIndexOf(".");
-		if (i > 0) {
-		    extension = this.configPath.substring(i + 1);
-		}
-		if (extension.equals("json")) {
-			json = this.fetchJsonFromFile();
-		} else {
-			json = this.fetchJsonFromWeb();
-		}
-		JSONObject obj = new JSONObject(json);
-		if (!obj.isNull("order")) {
-			JSONArray jsonArrOrder = obj.getJSONArray("order");
-			this.buildOrderFromJson(jsonArrOrder);
-		}
-		if (!obj.isNull("card")) {
-			JSONObject jsonObjCard = obj.getJSONObject("card");
-			this.buildCardFromJson(jsonObjCard);
-		}
-	}
-	
 	// build order from JSONArray
-	private void buildOrderFromJson(JSONArray jsonArr) {
-		for (int i = 0; i < jsonArr.length(); i++) {
-			JSONObject jsonItem = jsonArr.getJSONObject(i);
+	private void buildOrderFromJson(JSONArray jsonOrder) {
+		for (int i = 0; i < jsonOrder.length(); i++) {
+			JSONObject jsonItem = jsonOrder.getJSONObject(i);
 			Item item = new Item();
-			if (!jsonItem.isNull("size")) {
+			if (!jsonItem.isNull("size") && !jsonItem.getString("size").equals("")) {
 				item.setSize(jsonItem.getString("size"));
 			}
-			if (!jsonItem.isNull("number") && jsonItem.getInt("number") > 0) {
+			if (!jsonItem.isNull("number") && jsonItem.getInt("number") > -1) {
 				item.setNumber(jsonItem.getInt("number"));
-				this.order.add(item); // only add item if 
-				System.out.println("Item " + i + " is valid. Appended to order.");
+				this.order.add(item); // only add item if number field not empty
+				System.out.println("Item " + i + " is valid. Appended to order");
 			} else {
-				System.out.println("INVALID NUMBER FIELD. ITEM " + i + " IGNORED.***");
+				System.out.println("INVALID NUMBER FIELD. ITEM " + i + " IGNORED***");
 			}
 		}
 	}
 	
 	// build card from JSONObject
-	private void buildCardFromJson(JSONObject obj) {
-		if (!obj.isNull("number") && !obj.isNull("month") && !obj.isNull("year") && !obj.isNull("cvv")) {
-			this.card.setNumber(obj.getString("number"));
-			this.card.setMonth(obj.getString("month"));
-			this.card.setYear(obj.getString("year"));
-			this.card.setCvv(obj.getString("cvv"));
+	private void buildCardFromJson(JSONObject jsonCard) {
+		if (!jsonCard.isNull("number") && !jsonCard.getString("number").equals("")) {
+			this.card.setNumber(jsonCard.getString("number"));			
+		}
+		if (!jsonCard.isNull("month") && !jsonCard.getString("month").equals("")) {	
+			this.card.setMonth(jsonCard.getString("month"));
+		}
+		if (!jsonCard.isNull("year") && !jsonCard.getString("year").equals("")) {
+			this.card.setYear(jsonCard.getString("year"));
+		}
+		if (!jsonCard.isNull("cvv") && !jsonCard.getString("cvv").equals("")) {
+			this.card.setCvv(jsonCard.getString("cvv"));
 		}
 	}
-
-	// set the number and size fields of each item to be added to the order
-	// parts[0] should be the key and parts[1] should be the value
-//	private static void setField(Item item, String[] parts) {
-//		switch (parts[0]) {
-//			case "number":
-//				if (parts[1].matches("\\d+")) { // regex match for digits 
-//					item.setNumber(Integer.parseInt(parts[1]));
-////					System.out.println("Set " + parts[0] + " field --> " + parts[1]);
-//				}
-//				else {
-//					System.out.println("NUMBER FIELD IS NOT A NUMBER.***");
-//				}
-//				break;
-//			case "size":
-//				// check proper input (like regex match for number)!!!
-//				item.setSize(parts[1]);
-////				System.out.println("Set " + parts[0] + " field --> " + parts[1]);
-//				break;
-//			default:
-//				System.out.println("FIELD NEITHER NUMBER NOR SIZE. [" + parts[0] + ", " + parts[1] + "]***");
-//		}
-//	}
 
 	// prints out each order item for user to confirm
 	public void confirmOrder() {
@@ -266,7 +176,7 @@ public class ChromeSBot implements Runnable
 	}
 	
 	public void confirmCard() {
-		System.out.print(this.thread.getName() + "");
+		System.out.print(this.thread.getName() + " ");
 		System.out.println(this.card.getNumber() + " - " + this.card.getMonth() + "/" + this.card.getYear() + " - " + this.card.getCvv());
 	}
 
@@ -275,7 +185,7 @@ public class ChromeSBot implements Runnable
 		for (Item item : this.order) {
 			addToCart(item);
 			try { 
-				Thread.sleep(this.cartDelay); 
+				Thread.sleep(this.cartDelay);
 			} catch (Exception e) { 
 				// handle!!! 
 			}
@@ -302,53 +212,53 @@ public class ChromeSBot implements Runnable
 	private void newTab() {
 		((JavascriptExecutor) this.driver).executeScript("window.open('','_blank');");
 		ArrayList<String> tabs = new ArrayList<String> (this.driver.getWindowHandles());
-		this.driver.switchTo().window(tabs.get(tabs.size()-1));
+		this.driver.switchTo().window(tabs.get(tabs.size() - 1));
 	}
 
 	// select item size
 	private void selectSize(String size) {
+		String thread = this.thread.getName();
+		String title = this.driver.getTitle();
 		try {
 			Select sizeSelect = new Select(this.driver.findElement(By.id("s")));
-			System.out.print(this.thread.getName() + " ");;
-			System.out.println(this.driver.getTitle() + " // Selected size --> " + size);
 			sizeSelect.selectByVisibleText(size);
+			System.out.println(thread + " " + title + " // Selected size --> " + size + " (1 - id)");
 		}
 		catch (Exception e) {
-			System.out.println(this.driver.getTitle() + " // COULD NOT SELECT SIZE BY ID***");
-			System.out.print(this.thread.getName() + " ");;
-			System.out.println("Attempting to select size by tagname...");
+			System.out.println(thread + " " + title + " // COULD NOT SELECT SIZE " + size + " (1 - ID)***");
 			try {
 				Select sizeSelect = new Select(this.driver.findElement(By.tagName("select")));
-				System.out.print(this.thread.getName() + " ");;
-				System.out.println(this.driver.getTitle() + " // Selected size --> " + size);
 				sizeSelect.selectByVisibleText(size);
+				System.out.println(thread + " " + title + " // Selected size --> " + size + " (2 - tag)");
 			} catch (Exception e2) {
-				System.out.print(this.thread.getName() + " ");;
-				System.out.println(this.driver.getTitle() + " // COULD NOT SELECT SIZE BY TAGNAME GG***");
+				System.out.println(thread + " " + title + " // COULD NOT SELECT SIZE " + size + " (2 - TAG)***");
 			}
 		}
 	}
 
 	// click add to cart button
 	private void clickAddToCart() {
+		String thread = this.thread.getName();
+		String title = this.driver.getTitle();
+		// implement with element and indexes???
 		try {
 			WebElement addToCartButton = this.driver.findElement(By.xpath("//input[@value='add to cart']"));
 			addToCartButton.sendKeys(Keys.ENTER);
-			System.out.print(this.thread.getName() + " ");;
-			System.out.println(this.driver.getTitle() + " // Successfully carted.");
+			System.out.println(thread + " " + title + " // Successfully carted (1 - xpath)");
 		} catch (Exception e) {
-			System.out.print(this.thread.getName() + " ");;
-			System.out.println(this.driver.getTitle() + " // COULD NOT CART ITEM***");
-			System.out.print(this.thread.getName() + " ");;
-			System.out.println("Attemping to cart item again...");
+			System.out.println(thread + " " + title + " // COULD NOT CART (1 - XPATH)***");
 			try {
 				WebElement addToCartButton = this.driver.findElement(By.name("commit"));
 				addToCartButton.sendKeys(Keys.ENTER);
-				System.out.print(this.thread.getName() + " ");;
-				System.out.println(this.driver.getTitle() + " // Successfully carted.");
+				System.out.println(thread + " " + title + " // Successfully carted (2 - name)");
+				try {
+					// implement another fallback?
+					// a href="shop/"
+				} catch (Exception e3) {
+					
+				}
 			} catch (Exception e2) {
-				System.out.print(this.thread.getName() + " ");;
-				System.out.println(this.driver.getTitle() + " // COULD NOT CART ITEM AGAIN GG***");
+				System.out.println(thread + " " + title + " // COULD NOT CART (2 - NAME)***");
 			}
 		}
 	}
@@ -361,111 +271,161 @@ public class ChromeSBot implements Runnable
 			System.out.print(this.thread.getName() + " ");;
 			System.out.println("Navigating to checkout...");
 			this.driver.get("http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/chec" + "kout");
-			Elements paymentElements = null;
-			try {
-				this.sendPaymentDetails(paymentElements);
-				this.checkTerms();
-				this.clickProcessPayment();
-			} catch (exception E) {
+			if (this.card.getNumber() != null || this.card.getMonth() != null || this.card.getYear() != null || this.card.getCvv() != null) {
+				try {
+					List<WebElement> fieldsets = this.driver.findElements(By.tagName("fieldset"));
+					WebElement form = fieldsets.get(1);
+					System.out.println("fieldsets " + fieldsets.size());
+					if (this.card.getNumber() != null || this.card.getCvv() != null) {
+						try {
+							List<WebElement> inputs = form.findElements(By.tagName("input"));
+							System.out.println("input elements " + inputs.size());
+							if (this.card.getNumber() != null) {
+								this.sendKeyWithFallback("nnaerb", inputs, 0, this.card.getNumber());
+							}
+							if (this.card.getCvv() != null) {
+								this.sendKeyWithFallback("orcer", inputs, 1, this.card.getCvv());
+							}
+						} catch (Exception e) {
+							System.out.println("COULD NOT FIND INPUT ELEMENTS***");
+						}
+					}
+					
+					if (this.card.getMonth() != null || this.card.getYear() != null) {
+						try {
+							List<WebElement> selects = form.findElements(By.tagName("select"));
+							System.out.println("select elements " + selects.size());
+							if (this.card.getMonth() != null) {
+								this.selectWithFallback("credit_card_month", selects, 0, this.card.getNumber());
+							}
+							if (this.card.getYear() != null) {
+								this.selectWithFallback("credit_card_year", selects, 1, this.card.getYear());
+							}
+						} catch (Exception e) {
+							System.out.println("COULD NOT FIND SELECT ELEMENTS***");
+						}
+					}
+				} catch (Exception e) {
 				
+				}
 			}
-			
+			if (this.autoCheckTerms == true) {
+//				this.checkTerms();
+			}
+			if (this.autoProcessPayment == true) {
+				Thread.sleep(this.checkoutDelay);
+//				this.clickProcessPayment();					
+			}
+			return;
 		} catch (Exception e) { 
 			// handle!!! 
 		} 
 	}
 	
-	private void sendPaymentDetails(Elements paymentElements) {
-		this.sendKeyWithFallback();
-		this.selectWithFallback();
-		this.selectWithFallback();
-		this.sendKeyWithFallback();
-	}
-	
-	private void sendKeyWithFallback(String id, String path, Element element, String keys) {
+	private void sendKeyWithFallback(String id, List<WebElement> elements, int index, String value) {
+		String thread = this.thread.getName();
 		try {
-			
-		} catch (Exception e) {
+			WebElement input = this.driver.findElement(By.id(id));
+			input.sendKeys(value);
+			System.out.println(thread + " // Autofilled " + id + " --> " + value + " (1 - id)");
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			System.out.println(thread + " // COULD NOT AUTOFILL " + id + " (1 - ID)***");
 			try {
-				
+				WebElement input = elements.get(index);
+				input.sendKeys(value);
+				System.out.println(thread + " // Autofilled " + id + " --> " + value + " (2 - index)");
 			} catch (Exception e2) {
-				try {
-					
-				} catch (Exception e3) {
-					
-				}
+				e2.printStackTrace();
+				System.out.println(thread + " // COULD NOT AUTOFILL " + id + " (2 - INDEX)***");
 			}
 		}
-	}
-	
-	private void selectWithFallback(String id, String path, Element element, String target) {
-		
-	}
-	
-	private void checkTerms() {
-		try {
-			
-		} catch (Exception e) {
-			try {
-				
-			} catch (Exception e2) {
-				try {
-					
-				} catch (Exception e3) {
-					
-				}
-			}
-		}
-	}
-	
-	private void clickProcessPayment() {
-		try {
-			
-		} catch (Exception e) {
-			try {
-				
-			} catch (Exception e2) {
-				try {
-					
-				} catch (Exception e3) {
-					
-				}
-			}
-		}
-	}
-	
-	public void test() {
-		try {
-			this.cartItems();
-			this.checkout();
-//			this.driver.get("https://www.facebook.com");
-//			this.newTab();
-//			this.driver.get("https://www.instagram.com");
-//			this.driver.quit();
-		} catch (Exception e) {
-			// handle!!! 
-		}
-		long endTime = System.nanoTime();
-		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
-		this.elapsedTime = elapsedTime;
-		
-		System.out.print(this.thread.getName() + " ");;
-		System.out.println(elapsedTime + " seconds.");
 		return;
 	}
+	
+	private void selectWithFallback(String id, List<WebElement> elements, int index, String value) {
+		String thread = this.thread.getName();
+		try {
+			System.out.println("Attemping by id" + id);
+			List<WebElement> elems = this.driver.findElements(By.id(id));
+			System.out.println(elems.size());
+			for (WebElement elem : elems) {
+				System.out.println(elem.getTagName());
+				System.out.println(elem.getClass());
+				System.out.println(elem.getSize());
+			}
+			Select select = new Select(this.driver.findElement(By.id(id)));
+			System.out.println(thread + " Autofilled " + id + " --> " + value + " (1 - id)");
+			select.selectByVisibleText(value);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			System.out.println(thread + " COULD NOT AUTOFILL " + id + " (1 - ID)***");
+			try {
+				Select select = new Select(elements.get(index));
+				System.out.println(thread + " Autofilled " + id + " --> " + value + " (2 - index)");
+				select.selectByVisibleText(value);
+			} catch (Exception e2) {
+				e2.printStackTrace();
+				System.out.println(thread + " COULD NOT AUTOFILL " + id + " (2 - INDEX)***");
+			}
+		}
+		return;
+	}
+//	
+//	private void checkTerms() {
+//		try {
+//			
+//		} catch (Exception e) {
+//			try {
+//				
+//			} catch (Exception e2) {
+
+//			}
+//		}
+//		return;
+//	}
+//	
+//	private void clickProcessPayment() {
+//		try {
+//			
+//		} catch (Exception e) {
+//			try {
+//				
+//			} catch (Exception e2) {
+
+//			}
+//		}
+//		return;
+//	}
+	
+//	public void test() {
+//		return;
+//	}
 	
 	public void run() {
 		try {
 			this.cartItems();
+			
+			long endTime = System.nanoTime();
+			double atcTime = (double)(endTime - this.startTime)/1000000000.00;
+			
 			this.checkout();
+			
+			endTime = System.nanoTime();
+			double checkoutTime = (double)(endTime - this.startTime + atcTime)/1000000000.00;
+			double totalTime = atcTime + checkoutTime;
+			
+			System.out.println(this.thread.getName() + " ATC:" + atcTime + " // Checkout: " + checkoutTime + " // Total: " + totalTime);
 		} catch (Exception e) {
 			// handle!!!
 		}
-		long endTime = System.nanoTime();
-		double elapsedTime = (double)(endTime - startTime)/1000000000.00;
-
-		System.out.print(this.thread.getName() + " ");;
-		System.out.println(elapsedTime + " seconds.");
 		return;
 	}
+	
+//	public String toString() {
+//		return this.cartDelay + " " + this.checkoutDelay + " " + this.profile + " " + this.proxy + " " + this.blockImages;
+//		// print order and items???
+//	}
 }

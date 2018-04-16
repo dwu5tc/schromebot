@@ -74,82 +74,38 @@ public class SBotMaster {
 		}
 		
 		SBotMaster sBotMaster = null;
-	
+		String configPath = "test2.json";
+		
+		if (args.length > 0) {
+			configPath = args[0];
+		}
+		
 		try {
-			JSONObject master = Utils.fetchJsonObjFromFile("master.json");
+			JSONObject master = Utils.fetchJsonObjFromFile(configPath);
 			String[] fields = {"refreshDelay", "shopPath", "threads"};
 			if (Utils.jsonFieldsNotNull(master, fields)) {
 				int refreshDelay = master.getInt("refreshDelay");
 				String shopPath = master.getString("shopPath");
-				JSONArray threads = master.getJSONArray("threads"); 
+				JSONArray threads = master.getJSONArray("threads");
 				sBotMaster = new SBotMaster(refreshDelay, shopPath, threads);
 			} else {
-				Utils.debugPrint("Error reading refresh delay, shop path, and/or threads from master.json");
+				System.out.println("Error reading refresh delay, shop path, and/or threads from master.json");
 			}
 		} catch (Exception e) {
-			System.out.println("ERROR CONFIGURING BOTS FROM MASTER JSON FILE.***");
+			System.out.println("ERROR CONFIGURING BOTS FROM MASTER JSON FILE***");
 		}
 		
-//		if (args.length < 1) { // just for testing in eclipse
-//			String[] testArgs = {"test"};
-//			sBotMaster = new SBotMaster(testArgs);
-//		} else {
-//			sBotMaster = new SBotMaster(args);
-//		}
-		
-//		if (sBotMaster.isReal) {
-//			sBotMaster.grabStaleLink();
-//			
-//			System.out.println("Enter an INTEGER to set the delay time between page refreshes (in ms). 300-800 recommended.");
-////			System.out.println("Enter 0 to test sequential.");
-////			System.out.println("Enter -1 to test multi-threaded.");
-//			int delay = reader.nextInt();
-//			sBotMaster.refreshDelay = delay;
-//			
-//			if (sBotMaster.refreshDelay > 0) { 
-//				System.out.println("Will refresh every " + sBotMaster.refreshDelay + "ms.");
-//				System.out.println("Enter the expected number of new items to begin running bots.");
-//				int num = reader.nextInt();
-//				sBotMaster.expectedNumOfLinks = num;
-//				
-//				sBotMaster.refreshAndGrabLinks();
-////				chromeSBot.grabLinks();
-//				sBotMaster.run();
-//				for (List<Element> links : sBotMaster.falseLinks) {
-//					printLinkHrefs(links);
-//				}
-//				for (String error : sBotMaster.falseHtmls) {
-//					System.out.println(error);
-//				}
-//				System.out.println(sBotMaster.updatedHTML);
-//				reader.close();
-//				return;
-//			}
-//			} else if (chromeSBot.refreshDelay == 0) {
-//				chromeSBot.grabLinks();
-//				chromeSBot.test();
-//			} else if (chromeSBot.refreshDelay == -1) {
-//				chromeSBot.grabLinks();
-//				chromeSBot.run();
-//			} else {
-//				
-//			}
-//		} else {
-//			chromeSBot.grabLinks();
-//			System.out.println("Enter POSITIVE INTEGER to test multi-threaded.");
-//			System.out.println("Enter NEGATIVE INTEGER to test sequential.");
-//			if (reader.nextInt() > 0) {
-//				chromeSBot.run();
-////				System.out.println("Threads have been created.");
-////				System.out.println("Enter POSITIVE INTEGER to begin running bots.");
-////				if (reader.nextInt() > 0) {
-////					System.out.println("Running now...");
-////					chromeSBot.startAllBots();
-////				}
-//			} else {
-//				chromeSBot.test();
-//			}
-//		}
+		if (sBotMaster.refreshDelay > 0) {
+			System.out.println("Enter the expected number of new items to begin running bots.");
+			int num = reader.nextInt();
+			sBotMaster.expectedNumOfLinks = num;
+			sBotMaster.refreshAndGrabLinks();
+			sBotMaster.run();
+		} else {
+			sBotMaster.grabLinks();
+			System.out.println("Enter a number to begin.");
+			sBotMaster.run();
+		}
 		
 		// create a log file for each false html
 //		for (int i = 0; i < sBotMaster.falseHtmls.size(); i++) {
@@ -176,8 +132,6 @@ public class SBotMaster {
 //		} catch (Exception e) {
 //			
 //		}
-		
-		
 		reader.close();
 		return;
 	}
@@ -188,7 +142,7 @@ public class SBotMaster {
 		this.refreshDelay = refreshDelay;
 		this.shopPath = shopPath;
 		for (int i = 0; i < threads.length(); i++) {
-			JSONObject obj = new JSONObject(threads.get(i));
+			JSONObject obj = threads.getJSONObject(i);
 			String[] fields = {"cartDelay", "checkoutDelay", "profile", "order", "card"};
 			if (Utils.jsonFieldsNotNull(obj, fields)) {
 				int cartDelay = obj.getInt("cartDelay");
@@ -197,6 +151,27 @@ public class SBotMaster {
 				JSONArray order = obj.getJSONArray("order");
 				JSONObject card = obj.getJSONObject("card");
 				ChromeSBot bot = new ChromeSBot(cartDelay, checkoutDelay, profile, order, card);
+				// put these into constructor!!!
+				String newName = bot.getThread().getName();
+				newName = newName.substring(0, newName.length() - 1); // remove ] temporarily
+				if (!obj.isNull("proxy") && !obj.getString("proxy").equals("")) {
+					bot.setProxy(obj.getString("proxy"));
+					newName += (" " + obj.getString("proxy"));
+				}
+				if (!obj.isNull("blockImages") && obj.getBoolean("blockImages") != false) {
+					bot.setBlockImages(obj.getBoolean("blockImages"));
+					newName += " bi";
+				}
+				if (!obj.isNull("checkTerms") && obj.getBoolean("checkTerms") != false) {
+					bot.setCheckTerms(obj.getBoolean("checkTerms"));
+					newName += " ct";
+				}
+				if (!obj.isNull("processPayment") && obj.getBoolean("processPayment") != false) {
+					bot.setProcessPayment(obj.getBoolean("processPayment"));
+					newName += " pp";
+				}
+				bot.getThread().setName(newName + "]");
+				bot.initChrome(); // put this into constructor???
 				this.bots.add(bot);
 			}
 		}
@@ -226,6 +201,10 @@ public class SBotMaster {
 //		this.expectedNumOfLinks = num;
 //	}
 	
+	public int getRefreshDelay() {
+		return this.refreshDelay;
+	}
+	
 	// grab stale link (first product link of the target page) and set the stale link prop
 	// might be faster just to check the element and not the href???
 	private void grabStaleLink() {
@@ -243,7 +222,7 @@ public class SBotMaster {
 			this.staleLink = links.eq(0).attr("abs:href");
 			System.out.println("Stale link set --> " + this.staleLink);
 		} catch (Exception e) {
-			System.out.println("ERROR IN grabStaleLink FUNCTION.***");
+			System.out.println("ERROR IN grabStaleLink FUNCTION***");
 		}
 	}
 
@@ -317,12 +296,12 @@ public class SBotMaster {
 						Thread.sleep(this.refreshDelay);
 						attemptNum++;
 					} catch (Exception e) {
-						System.out.println("ERROR IN NESTED TRY-CATCH OF refreshAndGrabLinks FUNCTION.***");
+						System.out.println("ERROR IN NESTED TRY-CATCH OF refreshAndGrabLinks FUNCTION***");
 					}
 				}
 			}
 			catch (Exception e) {
-				System.out.println("ERROR IN refreshAndGrabLinks FUNCTION.***");
+				System.out.println("ERROR IN refreshAndGrabLinks FUNCTION***");
 			}
 		}
 	}
@@ -330,7 +309,6 @@ public class SBotMaster {
 	private void grabLinks() {
 		String target = "http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/sh" + "op/" + this.shopPath;
 		String linksContainer;
-		Utils.debugPrint(target);
 		if (this.shopPath.equals("new") || this.shopPath.equals("all")) {
 			Utils.debugPrint("path is " + this.shopPath);
 			linksContainer = "div.turbolink_scroller a";
@@ -351,17 +329,16 @@ public class SBotMaster {
 			for (ChromeSBot bot : this.bots) {
 				bot.setLinks(links);
 			}
-			System.out.println("Shop has been updated!");
 		} catch (Exception e) {
-			System.out.println("ERROR IN grabLinks FUNCTION.***");
+			System.out.println("ERROR IN grabLinks FUNCTION***");
 		}
 	}
 	
-	private void test() { // serial testing
-		for (ChromeSBot bot : this.bots) {
-			bot.test();
-		}
-	}
+//	private void test() {
+//		for (ChromeSBot bot : this.bots) {
+//			bot.test();
+//		}
+//	}
 	
 	private void run() {
 		for (ChromeSBot bot : this.bots) {

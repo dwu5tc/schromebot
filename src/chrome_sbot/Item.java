@@ -1,24 +1,33 @@
 package chrome_sbot;
 
+//import java.util.ArrayList;
+//import java.util.List;
+
 public class Item {
 	
 	private int number;
 	private String size;
-	private String url;
 	
+//	private List<String> keywords = new ArrayList<String>();
+
 	public Item() {}
+	
+//	public Item(int number, String size) {
+//		this.number = number;
+//		this.size = size;
+//	}
 	
 	public void setNumber(int number) { this.number = number; }
 	
 	public void setSize(String size) { this.size = size; }
 	
-	public void setUrl(String url) { this.url = url; }
+//	public void setKeywords(List<String> keywords) { this.keywords = keywords; }
 	
 	public int getNumber() { return this.number; }
 	
 	public String getSize() { return this.size; }
 	
-	public String getUrl() { return this.url; }
+//	public List<String> getKeywords() { return this.keywords; }
 	
 	public boolean isValid() {
 		return this.number > 0;

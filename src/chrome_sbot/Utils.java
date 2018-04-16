@@ -24,6 +24,7 @@ public class Utils {
 	public static Boolean jsonFieldsNotNull(JSONObject obj, String[] fields) {
 		for (String field : fields) {
 			if (obj.isNull(field)) {
+				System.out.println(field + " IS NULL***");
 				return false;
 			}
 		}
@@ -33,7 +34,8 @@ public class Utils {
 	public static JSONObject fetchJsonObjFromFile(String path) throws Exception { // be more specific with exception
 		String json = "";
         json = new String(Files.readAllBytes(Paths.get(path)));
-//        System.out.println(json);
+        debugPrint(json);
+//      System.out.println(json);
         JSONObject obj = new JSONObject(json);
         return obj;
 	}
