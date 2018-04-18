@@ -33,7 +33,6 @@ public class ChromeSBot implements Runnable
 	private int cartDelay;
 	private String profile;
 	private String proxy;
-	private boolean blockImages = false;
 	
 	private int checkoutDelay;
 	private boolean autoCheckTerms = false;
@@ -61,10 +60,6 @@ public class ChromeSBot implements Runnable
 	
 	public void setProxy(String proxy) {
 		this.proxy = proxy;
-	}
-	
-	public void setBlockImages(boolean bool) {
-		this.blockImages = bool;
 	}
 	
 	public void setCheckTerms(boolean bool) {
@@ -111,14 +106,12 @@ public class ChromeSBot implements Runnable
 		ChromeOptions options = new ChromeOptions();
 		if (this.profile != null) {
 			options.addArguments("user-data-dir=" + profile);
-		}
-		if (this.blockImages == true) {				
-			HashMap<String, Object> images = new HashMap<String, Object>();
-			images.put("images", 2);
-			HashMap<String, Object> prefs = new HashMap<String, Object>();
-			prefs.put("profile.default_content_setting_values", images);
-			options.setExperimentalOption("prefs", prefs);
-		}
+		}	
+		HashMap<String, Object> images = new HashMap<String, Object>();
+		images.put("images", 1);
+		HashMap<String, Object> prefs = new HashMap<String, Object>();
+		prefs.put("profile.default_content_setting_values", images);
+		options.setExperimentalOption("prefs", prefs);
 		if (this.proxy != null) {
 			System.out.println("SETTING PROXY TO " + this.proxy);
 			Proxy proxy = new Proxy();
@@ -271,9 +264,16 @@ public class ChromeSBot implements Runnable
 			System.out.print(this.thread.getName() + " ");;
 			System.out.println("Navigating to checkout...");
 			this.driver.get("http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/chec" + "kout");
+			System.out.println();
+			System.out.println();
+			System.out.println();
+			System.out.println(this.driver.getPageSource());
+			System.out.println();
+			System.out.println();
 			if (this.card.getNumber() != null || this.card.getMonth() != null || this.card.getYear() != null || this.card.getCvv() != null) {
 				try {
 					List<WebElement> fieldsets = this.driver.findElements(By.tagName("fieldset"));
+					// get first fieldset which holds the cc form
 					WebElement form = fieldsets.get(1);
 					System.out.println("fieldsets " + fieldsets.size());
 					if (this.card.getNumber() != null || this.card.getCvv() != null) {
@@ -281,10 +281,10 @@ public class ChromeSBot implements Runnable
 							List<WebElement> inputs = form.findElements(By.tagName("input"));
 							System.out.println("input elements " + inputs.size());
 							if (this.card.getNumber() != null) {
-								this.sendKeyWithFallback("nnaerb", inputs, 0, this.card.getNumber());
+								this.sendKeyWithIndex("nnaerb", inputs, 0, this.card.getNumber());
 							}
 							if (this.card.getCvv() != null) {
-								this.sendKeyWithFallback("orcer", inputs, 1, this.card.getCvv());
+								this.sendKeyWithIndex("orcer", inputs, 1, this.card.getCvv());
 							}
 						} catch (Exception e) {
 							System.out.println("COULD NOT FIND INPUT ELEMENTS***");
@@ -296,10 +296,10 @@ public class ChromeSBot implements Runnable
 							List<WebElement> selects = form.findElements(By.tagName("select"));
 							System.out.println("select elements " + selects.size());
 							if (this.card.getMonth() != null) {
-								this.selectWithFallback("credit_card_month", selects, 0, this.card.getNumber());
+								this.selectWithIndex("credit_card_month", selects, 0, this.card.getMonth());
 							}
 							if (this.card.getYear() != null) {
-								this.selectWithFallback("credit_card_year", selects, 1, this.card.getYear());
+								this.selectWithIndex("credit_card_year", selects, 1, this.card.getYear());
 							}
 						} catch (Exception e) {
 							System.out.println("COULD NOT FIND SELECT ELEMENTS***");
@@ -322,6 +322,17 @@ public class ChromeSBot implements Runnable
 		} 
 	}
 	
+	private void sendKeyWithIndex(String id, List<WebElement> elements, int index, String value) {
+		String thread = this.thread.getName();
+		try {
+			WebElement input = elements.get(index);
+			input.sendKeys(value);
+			System.out.println(thread + " // Autofilled " + id + " --> " + value + " (2 - index)");
+		} catch (Exception e) {
+			System.out.println(thread + " // COULD NOT AUTOFILL " + id + " (2 - INDEX)***");
+		}
+	}
+	
 	private void sendKeyWithFallback(String id, List<WebElement> elements, int index, String value) {
 		String thread = this.thread.getName();
 		try {
@@ -332,44 +343,42 @@ public class ChromeSBot implements Runnable
 		catch (Exception e) {
 			e.printStackTrace();
 			System.out.println(thread + " // COULD NOT AUTOFILL " + id + " (1 - ID)***");
-			try {
-				WebElement input = elements.get(index);
-				input.sendKeys(value);
-				System.out.println(thread + " // Autofilled " + id + " --> " + value + " (2 - index)");
-			} catch (Exception e2) {
-				e2.printStackTrace();
-				System.out.println(thread + " // COULD NOT AUTOFILL " + id + " (2 - INDEX)***");
-			}
+			this.sendKeyWithIndex(id, elements, index, value);
 		}
 		return;
+	}
+	
+	private void selectWithIndex(String id, List<WebElement> elements, int index, String value) {
+		String thread = this.thread.getName();
+		try {
+			Select select = new Select(elements.get(index));
+			System.out.println(thread + " Autofilled " + id + " --> " + value + " (2 - index)");
+			select.selectByVisibleText(value);
+		} catch (Exception e) {
+			System.out.println(thread + " COULD NOT AUTOFILL " + id + " (2 - INDEX)***");
+		}
 	}
 	
 	private void selectWithFallback(String id, List<WebElement> elements, int index, String value) {
 		String thread = this.thread.getName();
 		try {
-			System.out.println("Attemping by id" + id);
-			List<WebElement> elems = this.driver.findElements(By.id(id));
-			System.out.println(elems.size());
-			for (WebElement elem : elems) {
-				System.out.println(elem.getTagName());
-				System.out.println(elem.getClass());
-				System.out.println(elem.getSize());
+			System.out.println("Attemping by id " + id);
+			System.out.println(elements.size());
+			for (WebElement elem : elements) {
+				System.out.println("SELECT ELEMENT ID " + elem.getAttribute("id") + " SELECT ELEMENT TEXT" + elem.getText());
 			}
-			Select select = new Select(this.driver.findElement(By.id(id)));
+			System.out.println("IDIDIDIDIDI " + id);
+			WebElement element = this.driver.findElement(By.id(id));
+			System.out.println("LKJGLKAJSGLAKSJLG " + element.getAttribute("id"));
+			Select select = new Select(element);
+//			Select select = new Select(this.driver.findElement(By.id(id)));
 			System.out.println(thread + " Autofilled " + id + " --> " + value + " (1 - id)");
 			select.selectByVisibleText(value);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
 			System.out.println(thread + " COULD NOT AUTOFILL " + id + " (1 - ID)***");
-			try {
-				Select select = new Select(elements.get(index));
-				System.out.println(thread + " Autofilled " + id + " --> " + value + " (2 - index)");
-				select.selectByVisibleText(value);
-			} catch (Exception e2) {
-				e2.printStackTrace();
-				System.out.println(thread + " COULD NOT AUTOFILL " + id + " (2 - INDEX)***");
-			}
+			this.selectWithIndex(id, elements, index, value);
 		}
 		return;
 	}

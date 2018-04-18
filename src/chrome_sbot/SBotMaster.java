@@ -158,10 +158,6 @@ public class SBotMaster {
 					bot.setProxy(obj.getString("proxy"));
 					newName += (" " + obj.getString("proxy"));
 				}
-				if (!obj.isNull("blockImages") && obj.getBoolean("blockImages") != false) {
-					bot.setBlockImages(obj.getBoolean("blockImages"));
-					newName += " bi";
-				}
 				if (!obj.isNull("checkTerms") && obj.getBoolean("checkTerms") != false) {
 					bot.setCheckTerms(obj.getBoolean("checkTerms"));
 					newName += " ct";
