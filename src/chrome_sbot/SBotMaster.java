@@ -74,7 +74,7 @@ public class SBotMaster {
 		}
 		
 		SBotMaster sBotMaster = null;
-		String configPath = "test2.json";
+		String configPath = "test3.json";
 		
 		if (args.length > 0) {
 			configPath = args[0];

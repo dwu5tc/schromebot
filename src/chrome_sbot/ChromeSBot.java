@@ -259,32 +259,35 @@ public class ChromeSBot implements Runnable
 	// navigate to checkout page
 	private void checkout() {
 		try { 
-			Thread.sleep(this.cartDelay); 
+//			Thread.sleep(this.cartDelay); 
 			this.newTab();
 			System.out.print(this.thread.getName() + " ");;
 			System.out.println("Navigating to checkout...");
 			this.driver.get("http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/chec" + "kout");
-			System.out.println();
-			System.out.println();
-			System.out.println();
-			System.out.println(this.driver.getPageSource());
-			System.out.println();
-			System.out.println();
+//			System.out.println();
+//			System.out.println();
+//			System.out.println(this.driver.getPageSource());
+//			System.out.println();
+//			System.out.println();
+			
+			List<WebElement> fieldsets = null;
+			WebElement form = null;
+			List<WebElement> inputs = null;
+			List<WebElement> selects = null;
+			
 			if (this.card.getNumber() != null || this.card.getMonth() != null || this.card.getYear() != null || this.card.getCvv() != null) {
 				try {
-					List<WebElement> fieldsets = this.driver.findElements(By.tagName("fieldset"));
+					fieldsets = this.driver.findElements(By.tagName("fieldset"));
 					// get first fieldset which holds the cc form
-					WebElement form = fieldsets.get(1);
-					System.out.println("fieldsets " + fieldsets.size());
+					form = fieldsets.get(1);
 					if (this.card.getNumber() != null || this.card.getCvv() != null) {
 						try {
-							List<WebElement> inputs = form.findElements(By.tagName("input"));
-							System.out.println("input elements " + inputs.size());
+							inputs = form.findElements(By.tagName("input"));
 							if (this.card.getNumber() != null) {
-								this.sendKeyWithIndex("nnaerb", inputs, 0, this.card.getNumber());
+								this.sendKeyWithIndex("nnaerb", inputs, 0, this.card.getNumber()); // 0 is the index of the number input
 							}
 							if (this.card.getCvv() != null) {
-								this.sendKeyWithIndex("orcer", inputs, 1, this.card.getCvv());
+								this.sendKeyWithIndex("orcer", inputs, 1, this.card.getCvv()); // 1 is the index of the cvv input
 							}
 						} catch (Exception e) {
 							System.out.println("COULD NOT FIND INPUT ELEMENTS***");
@@ -293,13 +296,12 @@ public class ChromeSBot implements Runnable
 					
 					if (this.card.getMonth() != null || this.card.getYear() != null) {
 						try {
-							List<WebElement> selects = form.findElements(By.tagName("select"));
-							System.out.println("select elements " + selects.size());
+							selects = form.findElements(By.tagName("select"));
 							if (this.card.getMonth() != null) {
-								this.selectWithIndex("credit_card_month", selects, 0, this.card.getMonth());
+								this.selectWithIndex("credit_card_month", selects, 0, this.card.getMonth()); // 0 is the index of month select
 							}
 							if (this.card.getYear() != null) {
-								this.selectWithIndex("credit_card_year", selects, 1, this.card.getYear());
+								this.selectWithIndex("credit_card_year", selects, 1, this.card.getYear()); // 1 is the index of year select
 							}
 						} catch (Exception e) {
 							System.out.println("COULD NOT FIND SELECT ELEMENTS***");
@@ -310,13 +312,13 @@ public class ChromeSBot implements Runnable
 				}
 			}
 			if (this.autoCheckTerms == true) {
-//				this.checkTerms();
+				System.out.println("checking terms");
+				this.checkTermsWithFallback(inputs, 3); // 3 is the index of the terms checkbox input					
 			}
 			if (this.autoProcessPayment == true) {
-				Thread.sleep(this.checkoutDelay);
+//				Thread.sleep(this.checkoutDelay);
 //				this.clickProcessPayment();					
 			}
-			return;
 		} catch (Exception e) { 
 			// handle!!! 
 		} 
@@ -327,74 +329,83 @@ public class ChromeSBot implements Runnable
 		try {
 			WebElement input = elements.get(index);
 			input.sendKeys(value);
-			System.out.println(thread + " // Autofilled " + id + " --> " + value + " (2 - index)");
+			System.out.println(thread + " Autofilled " + id + " --> " + value + " (index)");
 		} catch (Exception e) {
-			System.out.println(thread + " // COULD NOT AUTOFILL " + id + " (2 - INDEX)***");
+			System.out.println(thread + " COULD NOT AUTOFILL " + id + " (INDEX)***");
 		}
 	}
 	
-	private void sendKeyWithFallback(String id, List<WebElement> elements, int index, String value) {
+	/*private void sendKeyWithFallback(String id, List<WebElement> elements, int index, String value) {
 		String thread = this.thread.getName();
 		try {
 			WebElement input = this.driver.findElement(By.id(id));
 			input.sendKeys(value);
-			System.out.println(thread + " // Autofilled " + id + " --> " + value + " (1 - id)");
+			System.out.println(thread + " Autofilled " + id + " --> " + value + " (id)");
 		}
 		catch (Exception e) {
 			e.printStackTrace();
-			System.out.println(thread + " // COULD NOT AUTOFILL " + id + " (1 - ID)***");
+			System.out.println(thread + " COULD NOT AUTOFILL " + id + " (ID)***");
 			this.sendKeyWithIndex(id, elements, index, value);
 		}
-		return;
-	}
+	}*/
 	
 	private void selectWithIndex(String id, List<WebElement> elements, int index, String value) {
 		String thread = this.thread.getName();
 		try {
 			Select select = new Select(elements.get(index));
-			System.out.println(thread + " Autofilled " + id + " --> " + value + " (2 - index)");
+			System.out.println(thread + " Autofilled " + id + " --> " + value + " (index)");
 			select.selectByVisibleText(value);
 		} catch (Exception e) {
-			System.out.println(thread + " COULD NOT AUTOFILL " + id + " (2 - INDEX)***");
+			System.out.println(thread + " COULD NOT AUTOFILL " + id + " (INDEX)***");
 		}
 	}
 	
-	private void selectWithFallback(String id, List<WebElement> elements, int index, String value) {
+	/*private void selectWithFallback(String id, List<WebElement> elements, int index, String value) {
 		String thread = this.thread.getName();
 		try {
-			System.out.println("Attemping by id " + id);
-			System.out.println(elements.size());
-			for (WebElement elem : elements) {
-				System.out.println("SELECT ELEMENT ID " + elem.getAttribute("id") + " SELECT ELEMENT TEXT" + elem.getText());
-			}
-			System.out.println("IDIDIDIDIDI " + id);
-			WebElement element = this.driver.findElement(By.id(id));
-			System.out.println("LKJGLKAJSGLAKSJLG " + element.getAttribute("id"));
-			Select select = new Select(element);
-//			Select select = new Select(this.driver.findElement(By.id(id)));
-			System.out.println(thread + " Autofilled " + id + " --> " + value + " (1 - id)");
+			Select select = new Select(this.driver.findElement(By.id(id)));
+			System.out.println(thread + " Autofilled " + id + " --> " + value + " (id)");
 			select.selectByVisibleText(value);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
-			System.out.println(thread + " COULD NOT AUTOFILL " + id + " (1 - ID)***");
+			System.out.println(thread + " COULD NOT AUTOFILL " + id + " (ID)***");
 			this.selectWithIndex(id, elements, index, value);
 		}
-		return;
+	}*/
+	
+	private void checkTermsWithFallback(List<WebElement> elements, int index) {
+		String thread = this.thread.getName();
+		try {
+			WebElement input = elements.get(index);
+			System.out.println("checking terms with falback now + " + elements.size() + " " + index);
+			if (input.getAttribute("class").equals("checkbox")) {
+				try {
+					input.click();					
+				} catch (Exception e2) {
+					System.out.println("can't click wtf");
+				}
+				System.out.println(thread + " Checked terms (index)");
+				return;
+			} else {
+				System.out.println(thread + " COULD NOT CHECKTERMS (INDEX)***");
+				for (int i = 2; i < elements.size(); i++) { // skip the cc number and cvv inputs
+					if (elements.get(i).getAttribute("class").equals("checkbox")) {
+						try {
+							elements.get(index).click();							
+						} catch (Exception e3) {
+							System.out.println("can't click either wtf");
+						}
+						System.out.println(thread + " Checked terms (iteration)");
+						return;
+					}
+				}
+				System.out.println(thread + " COULD NOT CHECKTERMS (ITERATION)***");
+			}			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
-//	
-//	private void checkTerms() {
-//		try {
-//			
-//		} catch (Exception e) {
-//			try {
-//				
-//			} catch (Exception e2) {
-
-//			}
-//		}
-//		return;
-//	}
 //	
 //	private void clickProcessPayment() {
 //		try {
@@ -430,7 +441,6 @@ public class ChromeSBot implements Runnable
 		} catch (Exception e) {
 			// handle!!!
 		}
-		return;
 	}
 	
 //	public String toString() {
