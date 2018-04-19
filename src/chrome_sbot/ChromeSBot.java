@@ -22,7 +22,6 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.Select;
-
 import org.openqa.selenium.JavascriptExecutor;
 
 public class ChromeSBot implements Runnable
@@ -177,10 +176,17 @@ public class ChromeSBot implements Runnable
 	public void cartItems() {
 		for (Item item : this.order) {
 			addToCart(item);
-			try { 
-				Thread.sleep(this.cartDelay);
-			} catch (Exception e) { 
-				// handle!!! 
+			if (this.order.size() == 1) {
+				System.out.println("order size only 1");
+				try { 
+					Thread.sleep(this.cartDelay);
+//					if (count == 1) {
+//						this.driver.get("http://www.su" + "pr" + "em" + "en" + "ew" + "yo" + "rk.com" + "/chec" + "kout");
+//					}
+//					count++;
+				} catch (Exception e) { 
+					// handle!!! 
+				}				
 			}
 		}
 	}
@@ -270,12 +276,20 @@ public class ChromeSBot implements Runnable
 //			System.out.println();
 //			System.out.println();
 			
-			List<WebElement> fieldsets = null;
-			WebElement form = null;
-			List<WebElement> inputs = null;
-			List<WebElement> selects = null;
+//			List<WebElement> fieldsets = null;
+//			WebElement form = null;
+//			List<WebElement> inputs = null;
+//			List<WebElement> selects = null;
 			
-			if (this.card.getNumber() != null || this.card.getMonth() != null || this.card.getYear() != null || this.card.getCvv() != null) {
+			((JavascriptExecutor) this.driver).executeScript("document.getElementById('nnaerb').setAttribute('value', '" + this.card.getNumber() + "')");
+			((JavascriptExecutor) this.driver).executeScript("document.getElementById('credit_card_month').getElementsByTagName('option')[" + (Integer.parseInt(this.card.getMonth()) - 1) + "].selected = 'selected'");
+			((JavascriptExecutor) this.driver).executeScript("document.getElementById('credit_card_year').getElementsByTagName('option')[" + (Integer.parseInt(this.card.getYear()) - 2018) + "].selected = 'selected'");
+			((JavascriptExecutor) this.driver).executeScript("document.getElementById('orcer').setAttribute('value', '" + this.card.getCvv() + "')");
+			WebElement checkbox = this.driver.findElement(By.cssSelector(".has-checkbox"));
+			WebElement checkbox2 = this.driver.findElement(By.cssSelector("input.button"));
+			checkbox.click();
+			checkbox2.click();
+			/*if (this.card.getNumber() != null || this.card.getMonth() != null || this.card.getYear() != null || this.card.getCvv() != null) {
 				try {
 					fieldsets = this.driver.findElements(By.tagName("fieldset"));
 					// get first fieldset which holds the cc form
@@ -284,37 +298,37 @@ public class ChromeSBot implements Runnable
 						try {
 							inputs = form.findElements(By.tagName("input"));
 							if (this.card.getNumber() != null) {
-								this.sendKeyWithIndex("nnaerb", inputs, 0, this.card.getNumber()); // 0 is the index of the number input
+//								this.sendKeyWithIndex("nnaerb", inputs, 0, this.card.getNumber()); // 0 is the index of the number input
 							}
-							if (this.card.getCvv() != null) {
-								this.sendKeyWithIndex("orcer", inputs, 1, this.card.getCvv()); // 1 is the index of the cvv input
-							}
+//							if (this.card.getCvv() != null) {
+//								this.sendKeyWithIndex("orcer", inputs, 1, this.card.getCvv()); // 1 is the index of the cvv input
+//							}
 						} catch (Exception e) {
 							System.out.println("COULD NOT FIND INPUT ELEMENTS***");
 						}
 					}
 					
-					if (this.card.getMonth() != null || this.card.getYear() != null) {
-						try {
-							selects = form.findElements(By.tagName("select"));
-							if (this.card.getMonth() != null) {
-								this.selectWithIndex("credit_card_month", selects, 0, this.card.getMonth()); // 0 is the index of month select
-							}
-							if (this.card.getYear() != null) {
-								this.selectWithIndex("credit_card_year", selects, 1, this.card.getYear()); // 1 is the index of year select
-							}
-						} catch (Exception e) {
-							System.out.println("COULD NOT FIND SELECT ELEMENTS***");
-						}
-					}
+//					if (this.card.getMonth() != null || this.card.getYear() != null) {
+//						try {
+//							selects = form.findElements(By.tagName("select"));
+//							if (this.card.getMonth() != null) {
+//								this.selectWithIndex("credit_card_month", selects, 0, this.card.getMonth()); // 0 is the index of month select
+//							}
+//							if (this.card.getYear() != null) {
+//								this.selectWithIndex("credit_card_year", selects, 1, this.card.getYear()); // 1 is the index of year select
+//							}
+//						} catch (Exception e) {
+//							System.out.println("COULD NOT FIND SELECT ELEMENTS***");
+//						}
+//					}
 				} catch (Exception e) {
 				
 				}
-			}
-			if (this.autoCheckTerms == true) {
-				System.out.println("checking terms");
-				this.checkTermsWithFallback(inputs, 3); // 3 is the index of the terms checkbox input					
-			}
+			}*/
+//			if (this.autoCheckTerms == true) {
+//				System.out.println("checking terms");
+//				this.checkTermsWithFallback(inputs, 3); // 3 is the index of the terms checkbox input					
+//			}
 			if (this.autoProcessPayment == true) {
 //				Thread.sleep(this.checkoutDelay);
 //				this.clickProcessPayment();					
@@ -375,36 +389,63 @@ public class ChromeSBot implements Runnable
 	}*/
 	
 	private void checkTermsWithFallback(List<WebElement> elements, int index) {
-		String thread = this.thread.getName();
 		try {
-			WebElement input = elements.get(index);
-			System.out.println("checking terms with falback now + " + elements.size() + " " + index);
-			if (input.getAttribute("class").equals("checkbox")) {
-				try {
-					input.click();					
-				} catch (Exception e2) {
-					System.out.println("can't click wtf");
-				}
-				System.out.println(thread + " Checked terms (index)");
-				return;
-			} else {
-				System.out.println(thread + " COULD NOT CHECKTERMS (INDEX)***");
-				for (int i = 2; i < elements.size(); i++) { // skip the cc number and cvv inputs
-					if (elements.get(i).getAttribute("class").equals("checkbox")) {
-						try {
-							elements.get(index).click();							
-						} catch (Exception e3) {
-							System.out.println("can't click either wtf");
-						}
-						System.out.println(thread + " Checked terms (iteration)");
-						return;
-					}
-				}
-				System.out.println(thread + " COULD NOT CHECKTERMS (ITERATION)***");
-			}			
+//			WebDriverWait wait = new WebDriverWait(this.driver, 10);
+//			WebElement element = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//*[@id='order_terms']")));
+//			WebElement element = wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//*[@id='order_terms']")));
+//			element.click();
+//			WebElement checkbox = this.driver.findElement(By.xpath("//*[@id='order_terms']"));
+//			WebElement checkbox2 = this.driver.findElement(By.xpath("//*[@id='cart-cc']/fieldset/p[2]/label/input"));
+//			WebElement checkbox2 = this.driver.findElement(By.xpath("//*[@class='icheckbox_minimal']/input[@class='checkbox']"));
+			WebElement checkbox = this.driver.findElement(By.cssSelector(".has-checkbox"));
+			WebElement checkbox2 = this.driver.findElement(By.cssSelector("input.button"));
+//			WebElement checkbox3 = this.driver.findElement(By.xpath(""));
+//			WebElement checkbox = this.driver.findElement(By.xpath("//*[@id='cart-cc']/fieldset/p[2]/label/div/ins"));
+//			checkbox.sendKeys(Keys.ENTER);
+//			checkbox.click();
+			checkbox.click();
+			checkbox2.click();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//			System.out.println("couldn't clickcheckbox");
+//		}
+//		String thread = this.thread.getName();
+//		try {
+//			WebElement input = elements.get(index);
+//			System.out.println("checking terms with falback now + " + elements.size() + " " + index);
+//			if (input.getAttribute("class").equals("checkbox")) {
+//				try {
+//					input.click();					
+//				} catch (Exception e2) {
+//					System.out.println("can't click wtf");
+//					System.out.println(thread + " COULD NOT CHECKTERMS (INDEX)***");
+//					for (int i = 2; i < elements.size(); i++) { // skip the cc number and cvv inputs
+//						System.out.println("element no " + i + "class is " + elements.get(i).getAttribute("class"));
+//						System.out.println("text is " + elements.get(i).getText());
+//						if (elements.get(i).getAttribute("class").equals("checkbox")) {
+//							System.out.println("found the checkbox");
+//							try {
+//								elements.get(index).click();							
+//							} catch (Exception e3) {
+//								System.out.println("can't click either wtf");
+//							}
+//							System.out.println(thread + " Checked terms (iteration)");
+//							return;
+//						}
+//					}
+//					System.out.println(thread + " COULD NOT CHECKTERMS (ITERATION)***");
+//				}
+//				System.out.println(thread + " Checked terms (index)");
+//				return;
+//			} else {
+//				
+//			}			
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
 	}
 //	
 //	private void clickProcessPayment() {
