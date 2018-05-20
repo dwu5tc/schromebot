@@ -34,7 +34,7 @@ public class Utils {
 	public static JSONObject fetchJsonObjFromFile(String path) throws Exception { // be more specific with exception
 		String json = "";
         json = new String(Files.readAllBytes(Paths.get(path)));
-        debugPrint(json);
+//        debugPrint(json);
 //      System.out.println(json);
         JSONObject obj = new JSONObject(json);
         return obj;

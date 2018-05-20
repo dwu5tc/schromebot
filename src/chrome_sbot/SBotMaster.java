@@ -74,7 +74,7 @@ public class SBotMaster {
 		}
 		
 		SBotMaster sBotMaster = null;
-		String configPath = "test1item.json";
+		String configPath = "master.json";
 		
 		if (args.length > 0) {
 			configPath = args[0];
@@ -96,6 +96,7 @@ public class SBotMaster {
 		}
 		
 		if (sBotMaster.refreshDelay > 0) {
+			sBotMaster.grabStaleLink();
 			System.out.println("Enter the expected number of new items to begin running bots.");
 			int num = reader.nextInt();
 			sBotMaster.expectedNumOfLinks = num;

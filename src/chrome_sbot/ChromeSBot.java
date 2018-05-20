@@ -177,7 +177,6 @@ public class ChromeSBot implements Runnable
 		for (Item item : this.order) {
 			addToCart(item);
 			if (this.order.size() == 1) {
-				System.out.println("order size only 1");
 				try { 
 					Thread.sleep(this.cartDelay);
 //					if (count == 1) {
@@ -280,15 +279,30 @@ public class ChromeSBot implements Runnable
 //			WebElement form = null;
 //			List<WebElement> inputs = null;
 //			List<WebElement> selects = null;
-			
-			((JavascriptExecutor) this.driver).executeScript("document.getElementById('nnaerb').setAttribute('value', '" + this.card.getNumber() + "')");
-			((JavascriptExecutor) this.driver).executeScript("document.getElementById('credit_card_month').getElementsByTagName('option')[" + (Integer.parseInt(this.card.getMonth()) - 1) + "].selected = 'selected'");
-			((JavascriptExecutor) this.driver).executeScript("document.getElementById('credit_card_year').getElementsByTagName('option')[" + (Integer.parseInt(this.card.getYear()) - 2018) + "].selected = 'selected'");
-			((JavascriptExecutor) this.driver).executeScript("document.getElementById('orcer').setAttribute('value', '" + this.card.getCvv() + "')");
-			WebElement checkbox = this.driver.findElement(By.cssSelector(".has-checkbox"));
-			WebElement checkbox2 = this.driver.findElement(By.cssSelector("input.button"));
-			checkbox.click();
-			checkbox2.click();
+			try {
+				Thread.sleep(200);
+				((JavascriptExecutor) this.driver).executeScript("document.getElementById('nnaerb').setAttribute('value', '" + this.card.getNumber() + "')");
+				Thread.sleep(100);
+				((JavascriptExecutor) this.driver).executeScript("document.getElementById('credit_card_month').getElementsByTagName('option')[" + (Integer.parseInt(this.card.getMonth()) - 1) + "].selected = 'selected'");
+				Thread.sleep(100);
+				((JavascriptExecutor) this.driver).executeScript("document.getElementById('credit_card_year').getElementsByTagName('option')[" + (Integer.parseInt(this.card.getYear()) - 2018) + "].selected = 'selected'");
+				Thread.sleep(200);
+				((JavascriptExecutor) this.driver).executeScript("document.getElementById('orcer').setAttribute('value', '" + this.card.getCvv() + "')");
+				if (this.autoCheckTerms) {
+					WebElement checkbox = this.driver.findElement(By.cssSelector(".has-checkbox"));
+					Thread.sleep(200);
+					checkbox.click();
+				}
+				if (this.autoProcessPayment) {
+					WebElement checkbox2 = this.driver.findElement(By.cssSelector("input.button"));
+					System.out.println("Delaying for " + this.checkoutDelay + " before processing payment.");
+					Thread.sleep(this.checkoutDelay);
+					checkbox2.click();					
+				}
+			} catch (Exception e) {
+				System.out.println("autofill messed up");
+			}
+//			checkbox2.click();
 			/*if (this.card.getNumber() != null || this.card.getMonth() != null || this.card.getYear() != null || this.card.getCvv() != null) {
 				try {
 					fieldsets = this.driver.findElements(By.tagName("fieldset"));
@@ -398,13 +412,15 @@ public class ChromeSBot implements Runnable
 //			WebElement checkbox2 = this.driver.findElement(By.xpath("//*[@id='cart-cc']/fieldset/p[2]/label/input"));
 //			WebElement checkbox2 = this.driver.findElement(By.xpath("//*[@class='icheckbox_minimal']/input[@class='checkbox']"));
 			WebElement checkbox = this.driver.findElement(By.cssSelector(".has-checkbox"));
-			WebElement checkbox2 = this.driver.findElement(By.cssSelector("input.button"));
+//			WebElement checkbox2 = this.driver.findElement(By.cssSelector("input.button"));
 //			WebElement checkbox3 = this.driver.findElement(By.xpath(""));
 //			WebElement checkbox = this.driver.findElement(By.xpath("//*[@id='cart-cc']/fieldset/p[2]/label/div/ins"));
 //			checkbox.sendKeys(Keys.ENTER);
 //			checkbox.click();
+//			System.out.println("clicking the terms thing");
 			checkbox.click();
-			checkbox2.click();
+//			System.out.println("clicking checkout");
+//			checkbox2.click();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
